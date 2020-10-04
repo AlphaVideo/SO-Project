@@ -38,11 +38,11 @@ void errorParse(){
 void processInput(char* input_file){
     char line[MAX_INPUT_SIZE];
 
-    /* Opens the file in read mode */
-    FILE *fp = fopen(input_file, "r");
+    /* Opens the input file in read mode */
+    FILE *in = fopen(input_file, "r");
 
     /* break loop with ^Z or ^D */
-    while (fgets(line, sizeof(line)/sizeof(char), fp)) {
+    while (fgets(line, sizeof(line)/sizeof(char), in)) {
         char token, type;
         char name[MAX_INPUT_SIZE];
 
@@ -82,7 +82,7 @@ void processInput(char* input_file){
             }
         }
     }
-    fclose(fp);
+    fclose(in);
 }
 
 void applyCommands(){
@@ -138,14 +138,16 @@ void applyCommands(){
 
 int main(int argc, char* argv[]) 
 {
+    /* Output file */
+    FILE *out; 
+
     if(argc != 3)
     {
         fprintf(stderr, "Error: number of given arguments incorrect.\n");
         exit(EXIT_FAILURE);
     }
 
-    /* Output file */
-    FILE *fp = fopen(argv[2], "w");
+    out = open(argv[2], "w");
 
     /* init filesystem */
     init_fs();
@@ -153,9 +155,9 @@ int main(int argc, char* argv[])
     /* process input and print tree */
     processInput(argv[1]);
     applyCommands();
-    print_tecnicofs_tree(fp);
-    fclose(fp);
-    
+    print_tecnicofs_tree(out);
+    fclose(out);
+
     /* release allocated memory */
     destroy_fs();
     exit(EXIT_SUCCESS);
