@@ -138,24 +138,24 @@ void applyCommands(){
 
 int main(int argc, char* argv[]) 
 {
-    char *input_file_name;
-
-    if(argc != 2)
+    if(argc != 3)
     {
         fprintf(stderr, "Error: number of given arguments incorrect.\n");
         exit(EXIT_FAILURE);
     }
 
-    input_file_name = argv[1];
+    /* Output file */
+    FILE *fp = fopen(argv[2], "w");
 
     /* init filesystem */
     init_fs();
 
     /* process input and print tree */
-    processInput(input_file_name);
+    processInput(argv[1]);
     applyCommands();
-    print_tecnicofs_tree(stdout);
-
+    print_tecnicofs_tree(fp);
+    fclose(fp);
+    
     /* release allocated memory */
     destroy_fs();
     exit(EXIT_SUCCESS);
