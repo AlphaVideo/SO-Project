@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    out = open(argv[2], "w");
+    out = fopen(argv[2], "w");
 
     /* init filesystem */
     init_fs();
