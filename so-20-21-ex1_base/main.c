@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <sys/time.h>
 #include "fs/operations.h"
 
 #define MAX_COMMANDS 150000
@@ -146,11 +147,16 @@ void applyCommands(){
     pthread_exit(NULL);
 }
 
-/* Function that handles the initialization and closing of the threads. Also applies commands. */
+/* Function that handles the initialization and closing of the threads. 
+Also applies the FS commands and handles execution time. */
 void execThreads()
 {
-    pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
     int i;
+    pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
+    struct timeval start, stop;
+    double elapsed;
+
+    gettimeofday(&start, NULL); /* Gets the starting time.*/
 
     for(i = 0; i < numberThreads; i++)
     {
@@ -161,6 +167,13 @@ void execThreads()
     {
         pthread_join(tids[i], NULL);
     }
+    gettimeofday(&stop, NULL); 
+
+    /* Calculates the time elapsed */
+    elapsed = ((double) stop.tv_sec + (double) (stop.tv_usec/1000000.0)) - ((double) start.tv_sec + (double) (start.tv_usec/1000000.0));
+    printf("TecnicoFS completed in %.4f seconds.\n", elapsed);
+
+    free(tids);
 }
 
 int main(int argc, char* argv[]) 
