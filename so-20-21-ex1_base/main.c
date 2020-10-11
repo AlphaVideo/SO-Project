@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <ctype.h>
+#include <pthread.h>
 #include "fs/operations.h"
 
 #define MAX_COMMANDS 150000
@@ -13,6 +14,8 @@ int numberThreads = 0;
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
+
+void execThreads();
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -40,6 +43,11 @@ void processInput(char* input_file){
 
     /* Opens the input file in read mode */
     FILE *in = fopen(input_file, "r");
+    if (in == NULL)
+    {
+        fprintf(stderr, "Error: input file does not exist.\n");
+        exit(EXIT_FAILURE);
+    }
 
     /* break loop with ^Z or ^D */
     while (fgets(line, sizeof(line)/sizeof(char), in)) {
@@ -134,27 +142,46 @@ void applyCommands(){
             }
         }
     }
+    pthread_exit(NULL);
+}
+
+void execThreads()
+{
+    pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
+    int i;
+
+    for(i = 0; i < numberThreads; i++)
+    {
+        pthread_create(&tids[i], NULL, (void*) applyCommands, NULL);
+    }
 }
 
 int main(int argc, char* argv[]) 
 {
-    /* Output file */
-    FILE *out; 
+    /* Argument parsing */
 
-    if(argc != 3)
+    if(argc != 4)
     {
         fprintf(stderr, "Error: number of given arguments incorrect.\n");
         exit(EXIT_FAILURE);
     }
+    
+    if(atoi(argv[3]) == 0)
+    {
+        fprintf(stderr, "Error: number of threads given incorrect.\n");
+        exit(EXIT_FAILURE); 
+    }
+    
+    numberThreads = atoi(argv[3]);
 
-    out = fopen(argv[2], "w");
+    FILE *out = fopen(argv[2], "w");
 
     /* init filesystem */
     init_fs();
 
     /* process input and print tree */
     processInput(argv[1]);
-    applyCommands();
+    execThreads();
     print_tecnicofs_tree(out);
     fclose(out);
 
@@ -162,3 +189,5 @@ int main(int argc, char* argv[])
     destroy_fs();
     exit(EXIT_SUCCESS);
 }
+
+
