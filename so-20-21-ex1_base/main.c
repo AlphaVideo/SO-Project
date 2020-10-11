@@ -142,9 +142,11 @@ void applyCommands(){
             }
         }
     }
+    printf("Thread ended.\n");
     pthread_exit(NULL);
 }
 
+/* Function that handles the initialization and closing of the threads. Also applies commands. */
 void execThreads()
 {
     pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
@@ -153,6 +155,11 @@ void execThreads()
     for(i = 0; i < numberThreads; i++)
     {
         pthread_create(&tids[i], NULL, (void*) applyCommands, NULL);
+    }
+
+    for(i = 0; i < numberThreads; i++)
+    {
+        pthread_join(tids[i], NULL);
     }
 }
 
