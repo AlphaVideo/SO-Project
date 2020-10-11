@@ -12,7 +12,7 @@ LDFLAGS=-lm
 
 all: tecnicofs
 
-tecnicofs: fs/state.o fs/operations.o main.o
+tecnicofs: fs/state.o fs/operations.o main.o sync.o
 	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs fs/state.o fs/operations.o main.o
 
 fs/state.o: fs/state.c fs/state.h tecnicofs-api-constants.h
@@ -23,6 +23,9 @@ fs/operations.o: fs/operations.c fs/operations.h fs/state.h tecnicofs-api-consta
 
 main.o: main.c fs/operations.h fs/state.h tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o main.o -c main.c
+
+sync.o: sync.c sync.h tecnicofs-api-constants.h
+	$(CC) $(CFLAGS) -o sync.o -c sync.c
 
 clean:
 	@echo Cleaning...

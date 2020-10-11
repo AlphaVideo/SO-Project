@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include "fs/operations.h"
+#include "sync.h"
 
 #define MAX_COMMANDS 150000
 #define MAX_INPUT_SIZE 100
@@ -16,7 +17,7 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
 
-void execThreads();
+void execThreads(int sync);
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -94,12 +95,31 @@ void processInput(char* input_file){
     fclose(in);
 }
 
-void applyCommands(){
+void applyCommands(int *sync){
+
+    int syncStrat = *sync; /*Removes value from pointer*/
+    pthread_mutex_t mlock;
+    pthread_rwlock_t rwlock;
+
+    if(syncStrat == MUTEX)
+        pthread_mutex_init(&mlock, NULL);
+    
+    else if (syncStrat == RWLOCK)
+        pthread_rwlock_init(&rwlock, NULL);
+
+
     while (numberCommands > 0){
+
+        lockr(syncStrat, mlock, rwlock);
+        lockw(syncStrat, mlock, rwlock);
+
         const char* command = removeCommand();
         if (command == NULL){
             continue;
         }
+
+        unlock(syncStrat, mlock, rwlock);
+        unlock(syncStrat, mlock, rwlock);
 
         char token, type;
         char name[MAX_INPUT_SIZE];
@@ -144,29 +164,43 @@ void applyCommands(){
         }
     }
     printf("Thread ended.\n");
-    pthread_exit(NULL);
 }
 
 /* Function that handles the initialization and closing of the threads. 
 Also applies the FS commands and handles execution time. */
-void execThreads()
+void execThreads(int sync)
 {
     int i;
     pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
     struct timeval start, stop;
-    double elapsed;
+    double elapsed;    
 
     gettimeofday(&start, NULL); /* Gets the starting time.*/
 
-    for(i = 0; i < numberThreads; i++)
+    /* Thread management */
+    if (sync != NOSYNC)
     {
-        pthread_create(&tids[i], NULL, (void*) applyCommands, NULL);
-    }
+        for(i = 0; i < numberThreads; i++)
+        {
+            if(pthread_create(&tids[i], NULL, (void*) applyCommands, (void*) &sync) != 0)
+            {
+                fprintf(stderr, "Error: couldn't create thread.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
 
-    for(i = 0; i < numberThreads; i++)
-    {
-        pthread_join(tids[i], NULL);
+        for(i = 0; i < numberThreads; i++)
+        {
+            if(pthread_join(tids[i], NULL) != 0)
+            {
+                fprintf(stderr, "Error: couldn't join thread.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
     }
+    else
+        applyCommands(&sync);
+
     gettimeofday(&stop, NULL); 
 
     /* Calculates the time elapsed */
@@ -179,8 +213,8 @@ void execThreads()
 int main(int argc, char* argv[]) 
 {
     /* Argument parsing */
-
-    if(argc != 4)
+    
+    if(argc != 5)
     {
         fprintf(stderr, "Error: number of given arguments incorrect.\n");
         exit(EXIT_FAILURE);
@@ -190,6 +224,20 @@ int main(int argc, char* argv[])
     {
         fprintf(stderr, "Error: number of threads given incorrect.\n");
         exit(EXIT_FAILURE); 
+    }
+
+    /* Sync strategy parse */
+    int syncStrat;
+    if (strcmp(argv[4], "mutex") == 0)
+        syncStrat = MUTEX;
+    else if (strcmp(argv[4], "rwlock") == 0)
+        syncStrat = RWLOCK;
+    else if (strcmp(argv[4], "nosync") == 0)
+        syncStrat = NOSYNC;
+    else
+    {
+        fprintf(stderr,"Error: invalid synchronization strategy.\n");
+        exit(EXIT_FAILURE);
     }
     
     numberThreads = atoi(argv[3]);
@@ -201,7 +249,7 @@ int main(int argc, char* argv[])
 
     /* process input and print tree */
     processInput(argv[1]);
-    execThreads();
+    execThreads(syncStrat);
     print_tecnicofs_tree(out);
     fclose(out);
 
