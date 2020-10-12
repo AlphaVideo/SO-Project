@@ -5,6 +5,8 @@
 
 typedef enum syncStrat { MUTEX, RWLOCK, NOSYNC } syncStrat;
 
+void lockInit(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock);
+void lockDestroy(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock);
 void lockr(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock);
 void lockw(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock);
 void unlock(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock);

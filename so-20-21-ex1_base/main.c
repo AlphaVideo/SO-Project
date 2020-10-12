@@ -23,6 +23,7 @@ pthread_mutex_t mlock;
 pthread_rwlock_t rwlock;
 
 void execThreads(int sync);
+void destroy_locks(int sync);
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -160,7 +161,7 @@ void applyCommands(int *sync){
         }
     }
     printf("Thread ended.\n");
-    return NULL;
+    return;
 }
 
 /* Function that handles the initialization and closing of the threads. 
@@ -207,6 +208,12 @@ void execThreads(int sync)
     free(tids);
 }
 
+void destroy_locks(int sync)
+{
+    lockDestroy(sync, mlock, rwlock);
+    lockDestroy(MUTEX, commandlock, rwlock);
+}
+
 int main(int argc, char* argv[]) 
 {
     /* Argument parsing */
@@ -227,12 +234,17 @@ int main(int argc, char* argv[])
     int syncStrat;
     if (strcmp(argv[4], "mutex") == 0)
     {
-        pthread_mutex_init(&commandlock,NULL);
-        pthread_mutex_init(&mlock, NULL); /* POR ERROS */
         syncStrat = MUTEX;
+        lockInit(syncStrat, commandlock, rwlock);
+        lockInit(syncStrat, mlock, rwlock);
     }
     else if (strcmp(argv[4], "rwlock") == 0)
+    {
+        /* Command lock is always mutex */
+        lockInit(MUTEX, commandlock, rwlock);
         syncStrat = RWLOCK;
+        lockInit(syncStrat, mlock, rwlock);
+    }
     else if (strcmp(argv[4], "nosync") == 0)
         syncStrat = NOSYNC;
     else
@@ -253,6 +265,10 @@ int main(int argc, char* argv[])
     execThreads(syncStrat);
     print_tecnicofs_tree(out);
     fclose(out);
+
+    /* Lock destruction */
+    if(syncStrat != NOSYNC)
+        destroy_locks(syncStrat);
 
     /* release allocated memory */
     destroy_fs();
