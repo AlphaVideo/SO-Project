@@ -17,6 +17,11 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
 
+/* Global Locks */
+pthread_mutex_t commandlock;
+pthread_mutex_t mlock;
+pthread_rwlock_t rwlock;
+
 void execThreads(int sync);
 
 int insertCommand(char* data) {
@@ -98,15 +103,6 @@ void processInput(char* input_file){
 void applyCommands(int *sync){
 
     int syncStrat = *sync; /*Removes value from pointer*/
-    pthread_mutex_t mlock;
-    pthread_rwlock_t rwlock;
-
-    if(syncStrat == MUTEX)
-        pthread_mutex_init(&mlock, NULL);
-    
-    else if (syncStrat == RWLOCK)
-        pthread_rwlock_init(&rwlock, NULL);
-
 
     while (numberCommands > 0){
 
@@ -164,6 +160,7 @@ void applyCommands(int *sync){
         }
     }
     printf("Thread ended.\n");
+    return NULL;
 }
 
 /* Function that handles the initialization and closing of the threads. 
@@ -229,7 +226,11 @@ int main(int argc, char* argv[])
     /* Sync strategy parse */
     int syncStrat;
     if (strcmp(argv[4], "mutex") == 0)
+    {
+        pthread_mutex_init(&commandlock,NULL);
+        pthread_mutex_init(&mlock, NULL); /* POR ERROS */
         syncStrat = MUTEX;
+    }
     else if (strcmp(argv[4], "rwlock") == 0)
         syncStrat = RWLOCK;
     else if (strcmp(argv[4], "nosync") == 0)
