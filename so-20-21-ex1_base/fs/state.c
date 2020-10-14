@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "state.h"
 #include "../tecnicofs-api-constants.h"
+#include <pthread.h>
 
 inode_t inode_table[INODE_TABLE_SIZE];
 
@@ -50,9 +51,23 @@ void inode_table_destroy() {
  *  inumber: identifier of the new i-node, if successfully created
  *     FAIL: if an error occurs
  */
-int inode_create(type nType) {
+int inode_create(type nType, syncStrat sync) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
+
+    int r;
+
+    if((r = pthread_mutex_trylock(&mlock)) == 0)
+        printf("1)Lock's closed. %d\n", r);
+    else
+        printf("1)Lock's open. %d\n", r);
+
+    lockw(sync, mlock, rwlock);
+
+    if((r = pthread_mutex_trylock(&mlock)) == 0)
+        printf("2)Lock's closed. %d\n", r);
+    else
+        printf("2)Lock's open. %d\n", r);
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
         if (inode_table[inumber].nodeType == T_NONE) {
@@ -69,9 +84,11 @@ int inode_create(type nType) {
             else {
                 inode_table[inumber].data.fileContents = NULL;
             }
+            unlock(sync, mlock, rwlock);
             return inumber;
         }
     }
+    unlock(sync, mlock, rwlock);
     return FAIL;
 }
 
@@ -81,12 +98,14 @@ int inode_create(type nType) {
  *  - inumber: identifier of the i-node
  * Returns: SUCCESS or FAIL
  */
-int inode_delete(int inumber) {
+int inode_delete(int inumber, syncStrat sync) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
+    lockw(sync, mlock, rwlock);
 
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_delete: invalid inumber\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     } 
 
@@ -94,6 +113,7 @@ int inode_delete(int inumber) {
     /* see inode_table_destroy function */
     if (inode_table[inumber].data.dirEntries)
         free(inode_table[inumber].data.dirEntries);
+    unlock(sync, mlock, rwlock);
     return SUCCESS;
 }
 
@@ -106,9 +126,11 @@ int inode_delete(int inumber) {
  *  - data: pointer to data
  * Returns: SUCCESS or FAIL
  */
-int inode_get(int inumber, type *nType, union Data *data) {
+int inode_get(int inumber, type *nType, union Data *data, syncStrat sync) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
+
+    lockr(sync, mlock, rwlock);
 
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_get: invalid inumber %d\n", inumber);
@@ -121,6 +143,8 @@ int inode_get(int inumber, type *nType, union Data *data) {
     if (data)
         *data = inode_table[inumber].data;
 
+    unlock(sync, mlock, rwlock);
+
     return SUCCESS;
 }
 
@@ -132,22 +156,26 @@ int inode_get(int inumber, type *nType, union Data *data) {
  *  - sub_inumber: identifier of the sub i-node entry
  * Returns: SUCCESS or FAIL
  */
-int dir_reset_entry(int inumber, int sub_inumber) {
+int dir_reset_entry(int inumber, int sub_inumber, syncStrat sync) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
+    lockw(sync, mlock, rwlock);
 
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_reset_entry: invalid inumber\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
 
     if (inode_table[inumber].nodeType != T_DIRECTORY) {
         printf("inode_reset_entry: can only reset entry to directories\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
 
     if ((sub_inumber < FREE_INODE) || (sub_inumber > INODE_TABLE_SIZE) || (inode_table[sub_inumber].nodeType == T_NONE)) {
         printf("inode_reset_entry: invalid entry inumber\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
 
@@ -156,9 +184,11 @@ int dir_reset_entry(int inumber, int sub_inumber) {
         if (inode_table[inumber].data.dirEntries[i].inumber == sub_inumber) {
             inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
             inode_table[inumber].data.dirEntries[i].name[0] = '\0';
+            unlock(sync, mlock, rwlock);
             return SUCCESS;
         }
     }
+    unlock(sync, mlock, rwlock);
     return FAIL;
 }
 
@@ -171,28 +201,33 @@ int dir_reset_entry(int inumber, int sub_inumber) {
  *  - sub_name: name of the sub i-node entry 
  * Returns: SUCCESS or FAIL
  */
-int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
+int dir_add_entry(int inumber, int sub_inumber, char *sub_name, syncStrat sync) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
+    lockw(sync, mlock, rwlock);
 
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_add_entry: invalid inumber\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
 
     if (inode_table[inumber].nodeType != T_DIRECTORY) {
         printf("inode_add_entry: can only add entry to directories\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
 
     if ((sub_inumber < 0) || (sub_inumber > INODE_TABLE_SIZE) || (inode_table[sub_inumber].nodeType == T_NONE)) {
         printf("inode_add_entry: invalid entry inumber\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
 
     if (strlen(sub_name) == 0 ) {
         printf("inode_add_entry: \
                entry name must be non-empty\n");
+        unlock(sync, mlock, rwlock);
         return FAIL;
     }
     
@@ -200,9 +235,11 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
         if (inode_table[inumber].data.dirEntries[i].inumber == FREE_INODE) {
             inode_table[inumber].data.dirEntries[i].inumber = sub_inumber;
             strcpy(inode_table[inumber].data.dirEntries[i].name, sub_name);
+            unlock(sync, mlock, rwlock);
             return SUCCESS;
         }
     }
+    unlock(sync, mlock, rwlock);
     return FAIL;
 }
 

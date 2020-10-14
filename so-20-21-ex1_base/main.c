@@ -104,19 +104,18 @@ void processInput(char* input_file){
 void applyCommands(int *sync){
 
     int syncStrat = *sync; /*Removes value from pointer*/
+    int commandStrat = MUTEX;
 
     while (numberCommands > 0){
 
-        lockr(syncStrat, mlock, rwlock);
-        lockw(syncStrat, mlock, rwlock);
+        lockw(commandStrat, commandlock, rwlock);
 
         const char* command = removeCommand();
         if (command == NULL){
             continue;
         }
 
-        unlock(syncStrat, mlock, rwlock);
-        unlock(syncStrat, mlock, rwlock);
+        unlock(commandStrat, commandlock, rwlock);
 
         char token, type;
         char name[MAX_INPUT_SIZE];
@@ -132,11 +131,11 @@ void applyCommands(int *sync){
                 switch (type) {
                     case 'f':
                         printf("Create file: %s\n", name);
-                        create(name, T_FILE);
+                        create(name, T_FILE, syncStrat);
                         break;
                     case 'd':
                         printf("Create directory: %s\n", name);
-                        create(name, T_DIRECTORY);
+                        create(name, T_DIRECTORY, syncStrat);
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
@@ -144,7 +143,7 @@ void applyCommands(int *sync){
                 }
                 break;
             case 'l': 
-                searchResult = lookup(name);
+                searchResult = lookup(name, syncStrat);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
@@ -152,7 +151,7 @@ void applyCommands(int *sync){
                 break;
             case 'd':
                 printf("Delete: %s\n", name);
-                delete(name);
+                delete(name, syncStrat);
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");

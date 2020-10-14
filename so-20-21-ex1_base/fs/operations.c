@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+
 
 /* Given a path, fills pointers with strings for the parent path and child
  * file name
@@ -10,10 +12,12 @@
  *  - parent: reference to a char*, to store parent path
  *  - child: reference to a char*, to store child file name
  */
-void split_parent_child_from_path(char * path, char ** parent, char ** child) {
+void split_parent_child_from_path(char * path, char ** parent, char ** child, syncStrat sync) {
 
 	int n_slashes = 0, last_slash_location = 0;
 	int len = strlen(path);
+
+	lockr(sync, mlock, rwlock);
 
 	// deal with trailing slash ( a/x vs a/x/ )
 	if (path[len-1] == '/') {
@@ -30,13 +34,14 @@ void split_parent_child_from_path(char * path, char ** parent, char ** child) {
 	if (n_slashes == 0) { // root directory
 		*parent = "";
 		*child = path;
+		unlock(sync, mlock, rwlock);
 		return;
 	}
 
 	path[last_slash_location] = '\0';
 	*parent = path;
 	*child = path + last_slash_location + 1;
-
+	unlock(sync, mlock, rwlock);
 }
 
 
@@ -47,7 +52,8 @@ void init_fs() {
 	inode_table_init();
 	
 	/* create root inode */
-	int root = inode_create(T_DIRECTORY);
+	syncStrat sync = NOSYNC; /* Init doesn't require sync */
+	int root = inode_create(T_DIRECTORY, sync);
 	
 	if (root != FS_ROOT) {
 		printf("failed to create node for tecnicofs root\n");
@@ -70,16 +76,19 @@ void destroy_fs() {
  *  - entries: entries of directory
  * Returns: SUCCESS or FAIL
  */
-
-int is_dir_empty(DirEntry *dirEntries) {
+int is_dir_empty(DirEntry *dirEntries, syncStrat sync) {
+	lockr(sync, mlock, rwlock);
 	if (dirEntries == NULL) {
+		unlock(sync, mlock, rwlock);
 		return FAIL;
 	}
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
 		if (dirEntries[i].inumber != FREE_INODE) {
+			unlock(sync, mlock, rwlock);
 			return FAIL;
 		}
 	}
+	unlock(sync, mlock, rwlock);
 	return SUCCESS;
 }
 
@@ -93,15 +102,19 @@ int is_dir_empty(DirEntry *dirEntries) {
  *  - inumber: found node's inumber
  *  - FAIL: if not found
  */
-int lookup_sub_node(char *name, DirEntry *entries) {
+int lookup_sub_node(char *name, DirEntry *entries, syncStrat sync) {
+	lockr(sync, mlock, rwlock);
 	if (entries == NULL) {
+		unlock(sync, mlock, rwlock);
 		return FAIL;
 	}
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
+			unlock(sync, mlock, rwlock);
             return entries[i].inumber;
         }
     }
+	unlock(sync, mlock, rwlock);
 	return FAIL;
 }
 
@@ -113,7 +126,7 @@ int lookup_sub_node(char *name, DirEntry *entries) {
  *  - nodeType: type of node
  * Returns: SUCCESS or FAIL
  */
-int create(char *name, type nodeType){
+int create(char *name, type nodeType, syncStrat sync){
 
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
@@ -122,9 +135,10 @@ int create(char *name, type nodeType){
 	union Data pdata;
 
 	strcpy(name_copy, name);
-	split_parent_child_from_path(name_copy, &parent_name, &child_name);
 
-	parent_inumber = lookup(parent_name);
+	split_parent_child_from_path(name_copy, &parent_name, &child_name, sync);
+	
+	parent_inumber = lookup(parent_name, sync);
 
 	if (parent_inumber == FAIL) {
 		printf("failed to create %s, invalid parent dir %s\n",
@@ -132,7 +146,7 @@ int create(char *name, type nodeType){
 		return FAIL;
 	}
 
-	inode_get(parent_inumber, &pType, &pdata);
+	inode_get(parent_inumber, &pType, &pdata, sync);
 
 	if(pType != T_DIRECTORY) {
 		printf("failed to create %s, parent %s is not a dir\n",
@@ -140,21 +154,21 @@ int create(char *name, type nodeType){
 		return FAIL;
 	}
 
-	if (lookup_sub_node(child_name, pdata.dirEntries) != FAIL) {
+	if (lookup_sub_node(child_name, pdata.dirEntries, sync) != FAIL) {
 		printf("failed to create %s, already exists in dir %s\n",
 		       child_name, parent_name);
 		return FAIL;
 	}
 
 	/* create node and add entry to folder that contains new node */
-	child_inumber = inode_create(nodeType);
+	child_inumber = inode_create(nodeType, sync);
 	if (child_inumber == FAIL) {
 		printf("failed to create %s in  %s, couldn't allocate inode\n",
 		        child_name, parent_name);
 		return FAIL;
 	}
 
-	if (dir_add_entry(parent_inumber, child_inumber, child_name) == FAIL) {
+	if (dir_add_entry(parent_inumber, child_inumber, child_name, sync) == FAIL) {
 		printf("could not add entry %s in dir %s\n",
 		       child_name, parent_name);
 		return FAIL;
@@ -170,7 +184,7 @@ int create(char *name, type nodeType){
  *  - name: path of node
  * Returns: SUCCESS or FAIL
  */
-int delete(char *name){
+int delete(char *name, syncStrat sync){
 
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
@@ -179,9 +193,9 @@ int delete(char *name){
 	union Data pdata, cdata;
 
 	strcpy(name_copy, name);
-	split_parent_child_from_path(name_copy, &parent_name, &child_name);
+	split_parent_child_from_path(name_copy, &parent_name, &child_name, sync);
 
-	parent_inumber = lookup(parent_name);
+	parent_inumber = lookup(parent_name, sync);
 
 	if (parent_inumber == FAIL) {
 		printf("failed to delete %s, invalid parent dir %s\n",
@@ -189,7 +203,7 @@ int delete(char *name){
 		return FAIL;
 	}
 
-	inode_get(parent_inumber, &pType, &pdata);
+	inode_get(parent_inumber, &pType, &pdata, sync);
 
 	if(pType != T_DIRECTORY) {
 		printf("failed to delete %s, parent %s is not a dir\n",
@@ -197,7 +211,7 @@ int delete(char *name){
 		return FAIL;
 	}
 
-	child_inumber = lookup_sub_node(child_name, pdata.dirEntries);
+	child_inumber = lookup_sub_node(child_name, pdata.dirEntries, sync);
 
 	if (child_inumber == FAIL) {
 		printf("could not delete %s, does not exist in dir %s\n",
@@ -205,22 +219,22 @@ int delete(char *name){
 		return FAIL;
 	}
 
-	inode_get(child_inumber, &cType, &cdata);
+	inode_get(child_inumber, &cType, &cdata, sync);
 
-	if (cType == T_DIRECTORY && is_dir_empty(cdata.dirEntries) == FAIL) {
+	if (cType == T_DIRECTORY && is_dir_empty(cdata.dirEntries, sync) == FAIL) {
 		printf("could not delete %s: is a directory and not empty\n",
 		       name);
 		return FAIL;
 	}
 
 	/* remove entry from folder that contained deleted node */
-	if (dir_reset_entry(parent_inumber, child_inumber) == FAIL) {
+	if (dir_reset_entry(parent_inumber, child_inumber, sync) == FAIL) {
 		printf("failed to delete %s from dir %s\n",
 		       child_name, parent_name);
 		return FAIL;
 	}
 
-	if (inode_delete(child_inumber) == FAIL) {
+	if (inode_delete(child_inumber, sync) == FAIL) {
 		printf("could not delete inode number %d from dir %s\n",
 		       child_inumber, parent_name);
 		return FAIL;
@@ -238,7 +252,7 @@ int delete(char *name){
  *  inumber: identifier of the i-node, if found
  *     FAIL: otherwise
  */
-int lookup(char *name) {
+int lookup(char *name, syncStrat sync) {
 	char full_path[MAX_FILE_NAME];
 	char delim[] = "/";
 
@@ -252,13 +266,13 @@ int lookup(char *name) {
 	union Data data;
 
 	/* get root inode data */
-	inode_get(current_inumber, &nType, &data);
+	inode_get(current_inumber, &nType, &data, sync);
 
 	char *path = strtok(full_path, delim);
 
 	/* search for all sub nodes */
-	while (path != NULL && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
-		inode_get(current_inumber, &nType, &data);
+	while (path != NULL && (current_inumber = lookup_sub_node(path, data.dirEntries, sync)) != FAIL) {
+		inode_get(current_inumber, &nType, &data, sync);
 		path = strtok(NULL, delim);
 	}
 
