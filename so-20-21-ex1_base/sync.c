@@ -3,47 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/*Initiates the corresponding lock. If NOSYNC, does nothing.*/
-void lockInit(syncStrat sync)
-{
-    if (sync == MUTEX)
-    {
-        if (pthread_mutex_init(&mlock, NULL) != 0)
-        {
-            fprintf(stderr, "Error: failed to initiate mutex lock.\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-    else if (sync == RWLOCK)
-    {
-       if (pthread_rwlock_init(&rwlock, NULL) != 0)
-        {
-            fprintf(stderr, "Error: failed to initiate rwlock.\n");
-            exit(EXIT_FAILURE);
-        } 
-    }
-}
-
-/*Destroys the corresponding lock. If NOSYNC, does nothing.*/
-void lockDestroy(syncStrat sync)
-{
-    if (sync == MUTEX)
-    {
-        if (pthread_mutex_destroy(&mlock) != 0)
-        {
-            fprintf(stderr, "Error: failed to destroy mutex lock.\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-    else if (sync == RWLOCK)
-    {
-       if (pthread_rwlock_destroy(&rwlock) != 0)
-        {
-            fprintf(stderr, "Error: failed to destroy rwlock.\n");
-            exit(EXIT_FAILURE);
-        } 
-    }
-}
 
 /*Locks the corresponding lock (read). If NOSYNC, does nothing.*/
 void lockr(syncStrat sync)
@@ -109,31 +68,7 @@ void unlock(syncStrat sync)
     }
 }
 
-/* Initializes command lock. Does nothing if NOSYNC.*/
-void commandLockInit(syncStrat sync)
-{
-    if (sync != NOSYNC)
-    {
-        if (pthread_mutex_init(&commandlock, NULL) != 0)
-        {
-            fprintf(stderr, "Error: failed to init command lock.\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-}
 
-/* Destroys command lock. Does nothing if NOSYNC.*/
-void commandLockDestroy(syncStrat sync)
-{
-    if (sync != NOSYNC)
-    {
-        if (pthread_mutex_destroy(&commandlock) != 0)
-        {
-            fprintf(stderr, "Error: failed to destroy command lock.\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-}
 
 /* Locks command lock. Does nothing if NOYSNC.*/
 void commandLockLock(syncStrat sync)

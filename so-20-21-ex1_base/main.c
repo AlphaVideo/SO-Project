@@ -18,12 +18,12 @@ int numberCommands = 0;
 int headQueue = 0;
 
 /* Global Locks */
-pthread_mutex_t commandlock;
-pthread_mutex_t mlock;
-pthread_rwlock_t rwlock;
+pthread_mutex_t commandlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 void execThreads(int sync);
-void destroy_locks(int sync);
+void destroy_locks();
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -123,6 +123,7 @@ void applyCommands(int *sync){
         }
 
         int searchResult;
+        
         commandLockUnlock(syncStrat);
 
         switch (token) {
@@ -202,10 +203,25 @@ void execThreads(int sync)
     free(tids);
 }
 
-void destroy_locks(int sync)
+void destroy_locks()
 {
-    lockDestroy(sync);
-    commandLockDestroy(MUTEX);
+    if (pthread_mutex_destroy(&commandlock) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy command lock.");
+        exit(EXIT_FAILURE);
+    }
+    
+    if (pthread_mutex_destroy(&mlock) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy command lock.");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pthread_rwlock_destroy(&rwlock) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy command lock.");
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char* argv[]) 
@@ -227,17 +243,9 @@ int main(int argc, char* argv[])
     /* Sync strategy parse */
     int syncStrat;
     if (strcmp(argv[4], "mutex") == 0)
-    {
         syncStrat = MUTEX;
-        lockInit(syncStrat);
-        commandLockInit(MUTEX);
-    }
     else if (strcmp(argv[4], "rwlock") == 0)
-    {
         syncStrat = RWLOCK;
-        lockInit(syncStrat);
-        commandLockInit(MUTEX);
-    }
     else if (strcmp(argv[4], "nosync") == 0)
         syncStrat = NOSYNC;
     else
@@ -267,8 +275,7 @@ int main(int argc, char* argv[])
     fclose(out);
 
     /* Lock destruction */
-    if(syncStrat != NOSYNC)
-        destroy_locks(syncStrat);
+    destroy_locks();
 
     /* release allocated memory */
     destroy_fs();
