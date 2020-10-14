@@ -104,21 +104,15 @@ void processInput(char* input_file){
 void applyCommands(int *sync){
 
     int syncStrat = *sync; /*Removes value from pointer*/
-    int commandStrat = MUTEX;
-
-    /* Command lock also irrelevant during nosync */
-    if (syncStrat == NOSYNC)
-        commandStrat = NOSYNC;
 
     while (numberCommands > 0){
 
-        lockw(commandStrat, commandlock, rwlock);
-
+        commandLockLock(syncStrat);
+        
         const char* command = removeCommand();
         if (command == NULL){
             continue;
         }
-
 
         char token, type;
         char name[MAX_INPUT_SIZE];
@@ -129,7 +123,7 @@ void applyCommands(int *sync){
         }
 
         int searchResult;
-        unlock(commandStrat, commandlock, rwlock);
+        commandLockUnlock(syncStrat);
 
         switch (token) {
             case 'c':
@@ -210,8 +204,8 @@ void execThreads(int sync)
 
 void destroy_locks(int sync)
 {
-    lockDestroy(sync, mlock, rwlock);
-    lockDestroy(MUTEX, commandlock, rwlock);
+    lockDestroy(sync);
+    commandLockDestroy(MUTEX);
 }
 
 int main(int argc, char* argv[]) 
@@ -235,15 +229,14 @@ int main(int argc, char* argv[])
     if (strcmp(argv[4], "mutex") == 0)
     {
         syncStrat = MUTEX;
-        lockInit(syncStrat, commandlock, rwlock);
-        lockInit(syncStrat, mlock, rwlock);
+        lockInit(syncStrat);
+        commandLockInit(MUTEX);
     }
     else if (strcmp(argv[4], "rwlock") == 0)
     {
-        /* Command lock is always mutex */
-        lockInit(MUTEX, commandlock, rwlock);
         syncStrat = RWLOCK;
-        lockInit(syncStrat, mlock, rwlock);
+        lockInit(syncStrat);
+        commandLockInit(MUTEX);
     }
     else if (strcmp(argv[4], "nosync") == 0)
         syncStrat = NOSYNC;

@@ -1,11 +1,11 @@
 
 /drapery
-/saccharimetrical
 /ergal
 /cypseline
 /telfer
-/dalle
+/saccharimetrical
 /reluctantly
+/dalle
 /Ceramium
 /coheritage
 /Paulinist
@@ -13,11 +13,5 @@
 /unwaggable
 /Lif
 /s1
-/s1/s2
-/s1/s2/s4
-/s1/s2/s5
-/s1/s3
+/s1/s5
 /benumb
-/Dungan
-/grapelet
-/therology

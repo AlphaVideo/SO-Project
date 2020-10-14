@@ -17,7 +17,7 @@ void split_parent_child_from_path(char * path, char ** parent, char ** child, sy
 	int n_slashes = 0, last_slash_location = 0;
 	int len = strlen(path);
 
-	lockr(sync, mlock, rwlock);
+	lockr(sync);
 
 	// deal with trailing slash ( a/x vs a/x/ )
 	if (path[len-1] == '/') {
@@ -34,14 +34,14 @@ void split_parent_child_from_path(char * path, char ** parent, char ** child, sy
 	if (n_slashes == 0) { // root directory
 		*parent = "";
 		*child = path;
-		unlock(sync, mlock, rwlock);
+		unlock(sync);
 		return;
 	}
 
 	path[last_slash_location] = '\0';
 	*parent = path;
 	*child = path + last_slash_location + 1;
-	unlock(sync, mlock, rwlock);
+	unlock(sync);
 }
 
 
@@ -77,18 +77,18 @@ void destroy_fs() {
  * Returns: SUCCESS or FAIL
  */
 int is_dir_empty(DirEntry *dirEntries, syncStrat sync) {
-	lockr(sync, mlock, rwlock);
+	lockr(sync);
 	if (dirEntries == NULL) {
-		unlock(sync, mlock, rwlock);
+		unlock(sync);
 		return FAIL;
 	}
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
 		if (dirEntries[i].inumber != FREE_INODE) {
-			unlock(sync, mlock, rwlock);
+			unlock(sync);
 			return FAIL;
 		}
 	}
-	unlock(sync, mlock, rwlock);
+	unlock(sync);
 	return SUCCESS;
 }
 
@@ -103,18 +103,18 @@ int is_dir_empty(DirEntry *dirEntries, syncStrat sync) {
  *  - FAIL: if not found
  */
 int lookup_sub_node(char *name, DirEntry *entries, syncStrat sync) {
-	lockr(sync, mlock, rwlock);
+	lockr(sync);
 	if (entries == NULL) {
-		unlock(sync, mlock, rwlock);
+		unlock(sync);
 		return FAIL;
 	}
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
-			unlock(sync, mlock, rwlock);
+			unlock(sync);
             return entries[i].inumber;
         }
     }
-	unlock(sync, mlock, rwlock);
+	unlock(sync);
 	return FAIL;
 }
 

@@ -6,10 +6,6 @@
 #include "../sync.h"
 #include "../tecnicofs-api-constants.h"
 
-/* Locks globais */
-extern pthread_mutex_t mlock;
-extern pthread_rwlock_t rwlock;
-
 /* FS root inode number */
 #define FS_ROOT 0
 
