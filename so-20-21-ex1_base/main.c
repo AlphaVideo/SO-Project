@@ -176,7 +176,7 @@ void execThreads(int sync)
     gettimeofday(&start, NULL); /* Gets the starting time.*/
 
     /* Thread management */
-    if (sync != NOSYNC)
+    if (numberThreads != 1)
     {
         for(i = 0; i < numberThreads; i++)
         {
@@ -255,14 +255,21 @@ int main(int argc, char* argv[])
     
     numberThreads = atoi(argv[3]);
 
-    FILE *out = fopen(argv[2], "w");
-
     /* init filesystem */
     init_fs();
 
     /* process input and print tree */
     processInput(argv[1]);
     execThreads(syncStrat);
+
+    FILE *out = fopen(argv[2], "w");
+
+    if(out == NULL)
+    {
+        fprintf(stderr, "Error: output file couldn't be created.");
+        exit(EXIT_FAILURE);
+    }
+
     print_tecnicofs_tree(out);
     fclose(out);
 
