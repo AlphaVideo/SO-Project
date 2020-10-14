@@ -60,7 +60,7 @@ void lockr(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock)
     {
         if (pthread_rwlock_rdlock(&rwlock) != 0)
         {
-            fprintf(stderr, "Error: failed to lock rwlock lock.\n");
+            fprintf(stderr, "Error: failed to lock rwlock.\n");
             exit(EXIT_FAILURE);
         }
     }
@@ -81,7 +81,7 @@ void lockw(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock)
     {
         if (pthread_rwlock_wrlock(&rwlock) != 0)
         {
-            fprintf(stderr, "Error: failed to lock rwlock lock.\n");
+            fprintf(stderr, "Error: failed to lock rwlock.\n");
             exit(EXIT_FAILURE);
         }
     }
@@ -103,7 +103,7 @@ void unlock(syncStrat sync, pthread_mutex_t mlock, pthread_rwlock_t rwlock)
     {
         if (pthread_rwlock_unlock(&rwlock) != 0)
         {
-            fprintf(stderr, "Error: failed to unlock rwlock lock.\n");
+            fprintf(stderr, "Error: failed to unlock rwlock.\n");
             exit(EXIT_FAILURE);
         }
     }

@@ -106,6 +106,10 @@ void applyCommands(int *sync){
     int syncStrat = *sync; /*Removes value from pointer*/
     int commandStrat = MUTEX;
 
+    /* Command lock also irrelevant during nosync */
+    if (syncStrat == NOSYNC)
+        commandStrat = NOSYNC;
+
     while (numberCommands > 0){
 
         lockw(commandStrat, commandlock, rwlock);
@@ -115,7 +119,6 @@ void applyCommands(int *sync){
             continue;
         }
 
-        unlock(commandStrat, commandlock, rwlock);
 
         char token, type;
         char name[MAX_INPUT_SIZE];
@@ -126,6 +129,8 @@ void applyCommands(int *sync){
         }
 
         int searchResult;
+        unlock(commandStrat, commandlock, rwlock);
+
         switch (token) {
             case 'c':
                 switch (type) {
@@ -159,7 +164,6 @@ void applyCommands(int *sync){
             }
         }
     }
-    printf("Thread ended.\n");
     return;
 }
 
@@ -175,28 +179,25 @@ void execThreads(int sync)
     gettimeofday(&start, NULL); /* Gets the starting time.*/
 
     /* Thread management */
-    if (numberThreads != 1)
+    
+    for(i = 0; i < numberThreads; i++)
     {
-        for(i = 0; i < numberThreads; i++)
+        if(pthread_create(&tids[i], NULL, (void*) applyCommands, (void*) &sync) != 0)
         {
-            if(pthread_create(&tids[i], NULL, (void*) applyCommands, (void*) &sync) != 0)
-            {
-                fprintf(stderr, "Error: couldn't create thread.\n");
-                exit(EXIT_FAILURE);
-            }
-        }
-
-        for(i = 0; i < numberThreads; i++)
-        {
-            if(pthread_join(tids[i], NULL) != 0)
-            {
-                fprintf(stderr, "Error: couldn't join thread.\n");
-                exit(EXIT_FAILURE);
-            }
+            fprintf(stderr, "Error: couldn't create thread.\n");
+            exit(EXIT_FAILURE);
         }
     }
-    else
-        applyCommands(&sync);
+
+    for(i = 0; i < numberThreads; i++)
+    {
+        if(pthread_join(tids[i], NULL) != 0)
+        {
+            fprintf(stderr, "Error: couldn't join thread.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
 
     gettimeofday(&stop, NULL); 
 

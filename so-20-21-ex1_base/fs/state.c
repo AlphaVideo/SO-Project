@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include "state.h"
 #include "../tecnicofs-api-constants.h"
-#include <pthread.h>
 
 inode_t inode_table[INODE_TABLE_SIZE];
 
@@ -55,19 +54,7 @@ int inode_create(type nType, syncStrat sync) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
 
-    int r;
-
-    if((r = pthread_mutex_trylock(&mlock)) == 0)
-        printf("1)Lock's closed. %d\n", r);
-    else
-        printf("1)Lock's open. %d\n", r);
-
     lockw(sync, mlock, rwlock);
-
-    if((r = pthread_mutex_trylock(&mlock)) == 0)
-        printf("2)Lock's closed. %d\n", r);
-    else
-        printf("2)Lock's open. %d\n", r);
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
         if (inode_table[inumber].nodeType == T_NONE) {

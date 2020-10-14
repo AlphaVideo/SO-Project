@@ -135,7 +135,7 @@ int create(char *name, type nodeType, syncStrat sync){
 	union Data pdata;
 
 	strcpy(name_copy, name);
-
+	
 	split_parent_child_from_path(name_copy, &parent_name, &child_name, sync);
 	
 	parent_inumber = lookup(parent_name, sync);
