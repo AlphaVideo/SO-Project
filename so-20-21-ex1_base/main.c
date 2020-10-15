@@ -207,19 +207,19 @@ void destroy_locks()
 {
     if (pthread_mutex_destroy(&commandlock) != 0)
     {
-        fprintf(stderr, "Error: couldn't destroy command lock.");
+        fprintf(stderr, "Error: couldn't destroy command lock.\n");
         exit(EXIT_FAILURE);
     }
     
     if (pthread_mutex_destroy(&mlock) != 0)
     {
-        fprintf(stderr, "Error: couldn't destroy command lock.");
+        fprintf(stderr, "Error: couldn't destroy command lock.\n");
         exit(EXIT_FAILURE);
     }
 
     if (pthread_rwlock_destroy(&rwlock) != 0)
     {
-        fprintf(stderr, "Error: couldn't destroy command lock.");
+        fprintf(stderr, "Error: couldn't destroy command lock.\n");
         exit(EXIT_FAILURE);
     }
 }
