@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
 
     if(out == NULL)
     {
-        fprintf(stderr, "Error: output file couldn't be created.");
+        fprintf(stderr, "Error: output file couldn't be created.\n");
         exit(EXIT_FAILURE);
     }
 
