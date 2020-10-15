@@ -143,7 +143,9 @@ void applyCommands(int *sync){
                 }
                 break;
             case 'l': 
-                searchResult = lookup(name, syncStrat);
+                lockr(syncStrat);
+                searchResult = lookup(name);
+                unlock(syncStrat);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else

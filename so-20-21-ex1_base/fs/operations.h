@@ -5,10 +5,10 @@
 
 void init_fs();
 void destroy_fs();
-int is_dir_empty(DirEntry *dirEntries, syncStrat sync);
+int is_dir_empty(DirEntry *dirEntries);
 int create(char *name, type nodeType, syncStrat sync);
 int delete(char *name, syncStrat sync);
-int lookup(char *name, syncStrat sync);
+int lookup(char *name);
 void print_tecnicofs_tree(FILE *fp);
 
 #endif /* FS_H */

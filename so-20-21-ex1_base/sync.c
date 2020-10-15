@@ -69,7 +69,6 @@ void unlock(syncStrat sync)
 }
 
 
-
 /* Locks command lock. Does nothing if NOYSNC.*/
 void commandLockLock(syncStrat sync)
 {
