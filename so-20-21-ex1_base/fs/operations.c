@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 
 
 /* Given a path, fills pointers with strings for the parent path and child
@@ -257,6 +256,8 @@ int delete(char *name, syncStrat sync){
  *     FAIL: otherwise
  */
 int lookup(char *name){
+
+	/* Locking for this function is always external */
 
 	char full_path[MAX_FILE_NAME];
 	char delim[] = "/";

@@ -94,3 +94,25 @@ void commandLockUnlock(syncStrat sync)
         }
     }
 }
+
+/* Destroys all locks initialized in main. */
+void destroyLocks()
+{
+    if (pthread_mutex_destroy(&commandlock) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy command lock.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    if (pthread_mutex_destroy(&mlock) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy mutex lock.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pthread_rwlock_destroy(&rwlock) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy rwlock.\n");
+        exit(EXIT_FAILURE);
+    }
+}

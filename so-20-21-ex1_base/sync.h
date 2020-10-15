@@ -14,7 +14,10 @@ void lockr(syncStrat sync);
 void lockw(syncStrat sync);
 void unlock(syncStrat sync);
 
+/* removeCommands needs it's own lock */
 void commandLockLock(syncStrat sync);
 void commandLockUnlock(syncStrat sync);
+
+void destroyLocks();
 
 #endif

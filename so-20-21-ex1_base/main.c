@@ -98,7 +98,12 @@ void processInput(char* input_file){
             }
         }
     }
-    fclose(in);
+
+    if(fclose(in) != 0)
+    {
+        fprintf(stderr, "Error: input file could not be closed.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void applyCommands(int *sync){
@@ -146,6 +151,7 @@ void applyCommands(int *sync){
                 lockr(syncStrat);
                 searchResult = lookup(name);
                 unlock(syncStrat);
+                
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
@@ -177,23 +183,28 @@ void execThreads(int sync)
 
     /* Thread management */
     
-    for(i = 0; i < numberThreads; i++)
+    if (numberThreads != 1)
     {
-        if(pthread_create(&tids[i], NULL, (void*) applyCommands, (void*) &sync) != 0)
+        for(i = 0; i < numberThreads; i++)
         {
-            fprintf(stderr, "Error: couldn't create thread.\n");
-            exit(EXIT_FAILURE);
+            if(pthread_create(&tids[i], NULL, (void*) applyCommands, (void*) &sync) != 0)
+            {
+                fprintf(stderr, "Error: couldn't create thread.\n");
+                exit(EXIT_FAILURE);
+            }
         }
-    }
 
-    for(i = 0; i < numberThreads; i++)
-    {
-        if(pthread_join(tids[i], NULL) != 0)
+        for(i = 0; i < numberThreads; i++)
         {
-            fprintf(stderr, "Error: couldn't join thread.\n");
-            exit(EXIT_FAILURE);
+            if(pthread_join(tids[i], NULL) != 0)
+            {
+                fprintf(stderr, "Error: couldn't join thread.\n");
+                exit(EXIT_FAILURE);
+            }
         }
     }
+    else
+        applyCommands(&sync);
 
 
     gettimeofday(&stop, NULL); 
@@ -205,26 +216,6 @@ void execThreads(int sync)
     free(tids);
 }
 
-void destroy_locks()
-{
-    if (pthread_mutex_destroy(&commandlock) != 0)
-    {
-        fprintf(stderr, "Error: couldn't destroy command lock.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    if (pthread_mutex_destroy(&mlock) != 0)
-    {
-        fprintf(stderr, "Error: couldn't destroy command lock.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pthread_rwlock_destroy(&rwlock) != 0)
-    {
-        fprintf(stderr, "Error: couldn't destroy command lock.\n");
-        exit(EXIT_FAILURE);
-    }
-}
 
 int main(int argc, char* argv[]) 
 {
@@ -274,10 +265,15 @@ int main(int argc, char* argv[])
     }
 
     print_tecnicofs_tree(out);
-    fclose(out);
+
+    if(fclose(out) != 0)
+    {
+        fprintf(stderr, "Error: input file could not be closed.\n");
+        exit(EXIT_FAILURE);
+    }
 
     /* Lock destruction */
-    destroy_locks();
+    destroyLocks();
 
     /* release allocated memory */
     destroy_fs();
