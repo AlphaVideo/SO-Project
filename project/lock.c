@@ -1,7 +1,7 @@
-#include "sync.h"
-#include <pthread.h>
+#include "lock.h"
 #include <stdio.h>
 #include <stdlib.h>
+
 
 
 /*Read locks the given node lock.*/
@@ -65,5 +65,22 @@ void destroyLocks()
     {
         fprintf(stderr, "Error: couldn't destroy command lock.\n");
         exit(EXIT_FAILURE);
+    }
+}
+
+
+void printLockList(pthread_rwlock_t **lockList)
+{
+    int i;
+    for(i = 0; i < 50; i++)
+    {
+        if(lockList[i] == NULL)
+        {
+            printf("#%d| 0 |\n", i);
+        }
+        else
+        {
+            printf("#%d| 1 |\n", i);
+        }
     }
 }

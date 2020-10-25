@@ -115,6 +115,8 @@ int lookup_sub_node(char *name, DirEntry *entries) {
  */
 int create(char *name, type nodeType){
 
+	pthread_rwlock_t *lockList[INODE_TABLE_SIZE] = {NULL};
+
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
 	/* use for copy */
@@ -125,25 +127,30 @@ int create(char *name, type nodeType){
 	
 	split_parent_child_from_path(name_copy, &parent_name, &child_name);
 	
-	parent_inumber = lookup(parent_name);
+	parent_inumber = lookup(parent_name, lockList);
 
 	if (parent_inumber == FAIL) {
 		printf("failed to create %s, invalid parent dir %s\n",
 		        name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
+	/* Parent is already locked in read mode due to the lookup */
+	lockListSwitchToWr(parent_inumber, lockList);
 	inode_get(parent_inumber, &pType, &pdata);
 
 	if(pType != T_DIRECTORY) {
 		printf("failed to create %s, parent %s is not a dir\n",
 		        name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
 	if (lookup_sub_node(child_name, pdata.dirEntries) != FAIL) {
 		printf("failed to create %s, already exists in dir %s\n",
 		       child_name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
@@ -152,14 +159,18 @@ int create(char *name, type nodeType){
 	if (child_inumber == FAIL) {
 		printf("failed to create %s in  %s, couldn't allocate inode\n",
 		        child_name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
 	if (dir_add_entry(parent_inumber, child_inumber, child_name) == FAIL) {
 		printf("could not add entry %s in dir %s\n",
 		       child_name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
+
+	lockListClear(lockList);
 	return SUCCESS;
 }
 
@@ -172,6 +183,8 @@ int create(char *name, type nodeType){
  */
 int delete(char *name){
 
+	pthread_rwlock_t *lockList[INODE_TABLE_SIZE] = {NULL};
+
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
 	/* use for copy */
@@ -181,19 +194,23 @@ int delete(char *name){
 	strcpy(name_copy, name);
 	split_parent_child_from_path(name_copy, &parent_name, &child_name);
 
-	parent_inumber = lookup(parent_name);
+	parent_inumber = lookup(parent_name, lockList);
 
 	if (parent_inumber == FAIL) {
 		printf("failed to delete %s, invalid parent dir %s\n",
 		        child_name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
+	/* Parent is already locked in read mode due to the lookup */
+	lockListSwitchToWr(parent_inumber, lockList);
 	inode_get(parent_inumber, &pType, &pdata);
 
 	if(pType != T_DIRECTORY) {
 		printf("failed to delete %s, parent %s is not a dir\n",
 		        child_name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
@@ -202,14 +219,17 @@ int delete(char *name){
 	if (child_inumber == FAIL) {
 		printf("could not delete %s, does not exist in dir %s\n",
 		       name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
+	lockListAddWr(child_inumber, lockList);
 	inode_get(child_inumber, &cType, &cdata);
 
 	if (cType == T_DIRECTORY && is_dir_empty(cdata.dirEntries) == FAIL) {
 		printf("could not delete %s: is a directory and not empty\n",
 		       name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
@@ -217,15 +237,18 @@ int delete(char *name){
 	if (dir_reset_entry(parent_inumber, child_inumber) == FAIL) {
 		printf("failed to delete %s from dir %s\n",
 		       child_name, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
 	if (inode_delete(child_inumber) == FAIL) {
 		printf("could not delete inode number %d from dir %s\n",
 		       child_inumber, parent_name);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
+	lockListClear(lockList);
 	return SUCCESS;
 }
 
@@ -238,7 +261,7 @@ int delete(char *name){
  *  inumber: identifier of the i-node, if found
  *     FAIL: otherwise
  */
-int lookup(char *name){
+int lookup(char *name, pthread_rwlock_t **lookupLocks){
 
 	char full_path[MAX_FILE_NAME];
 	char delim[] = "/";
@@ -253,16 +276,17 @@ int lookup(char *name){
 	union Data data;
 
 	/* get root inode data */
+	lockListAddRd(current_inumber, lookupLocks);
 	inode_get(current_inumber, &nType, &data);
 
 	char *path = strtok(full_path, delim);
 
 	/* search for all sub nodes */
 	while (path != NULL && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
+		lockListAddRd(current_inumber, lookupLocks);
 		inode_get(current_inumber, &nType, &data);
 		path = strtok(NULL, delim);
 	}
-
 	return current_inumber;
 }
 

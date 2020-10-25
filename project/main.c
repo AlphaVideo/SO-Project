@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include "fs/operations.h"
-#include "sync.h"
+#include "lock.h"
 
 #define MAX_COMMANDS 150000
 #define MAX_INPUT_SIZE 100
@@ -106,6 +106,8 @@ void processInput(char* input_file){
 
 void applyCommands(){
 
+    /* Lookup function requires it's own external list */
+    pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
     while (numberCommands > 0){
 
         commandLockLock();
@@ -144,12 +146,13 @@ void applyCommands(){
                 }
                 break;
             case 'l': 
-                searchResult = lookup(name);
+                searchResult = lookup(name, lookupLocks);
                 
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
                     printf("Search: %s not found\n", name);
+                lockListClear(lookupLocks);
                 break;
             case 'd':
                 printf("Delete: %s\n", name);

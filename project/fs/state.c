@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include "state.h"
 #include "../tecnicofs-api-constants.h"
-
-#include "../sync.h"
+#include "../lock.h"
 
 inode_t inode_table[INODE_TABLE_SIZE];
 
@@ -243,6 +242,60 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
                 }
                 inode_print_tree(fp, inode_table[inumber].data.dirEntries[i].inumber, path);
             }
+        }
+    }
+}
+
+/* Adds node lock to the list and locks it on read mode. On invalid inumber, does nothing. */
+void lockListAddRd(int inumber, pthread_rwlock_t **lockList)
+{
+    if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
+        printf("inode_get: invalid inumber %d\n", inumber);
+        return;
+    }
+
+    lockrd(&inode_table[inumber].lock);
+    lockList[inumber] = &inode_table[inumber].lock;
+}
+
+
+/* Adds node lock to the list and locks it on write mode. On invalid inumber, does nothing. */
+void lockListAddWr(int inumber, pthread_rwlock_t **lockList)
+{
+    if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
+        printf("inode_get: invalid inumber %d\n", inumber);
+        return;
+    }
+
+    lockwr(&inode_table[inumber].lock);
+    lockList[inumber] = &inode_table[inumber].lock;
+}
+
+/* Used for setting parent directories to write mode before using create/delete.*/
+void lockListSwitchToWr(int inumber, pthread_rwlock_t **lockList)
+{
+    if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
+        printf("inode_get: invalid inumber %d\n", inumber);
+        return;
+    }
+
+    if(lockList[inumber] != NULL)
+    {
+        unlock(lockList[inumber]);
+        lockwr(lockList[inumber]);
+    }
+}
+
+/* Unlocks the entire list of locks and points them to NULL.*/
+void lockListClear(pthread_rwlock_t **lockList)
+{
+    int i;
+    for(i = 0; i < INODE_TABLE_SIZE; i++)
+    {
+        if(lockList[i] != NULL)
+        {
+            unlock(lockList[i]);
+            lockList[i] = NULL;
         }
     }
 }
