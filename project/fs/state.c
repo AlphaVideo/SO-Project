@@ -5,6 +5,8 @@
 #include "state.h"
 #include "../tecnicofs-api-constants.h"
 
+#include "../sync.h"
+
 inode_t inode_table[INODE_TABLE_SIZE];
 
 
@@ -61,7 +63,14 @@ int inode_create(type nType) {
             if (nType == T_DIRECTORY) {
                 /* Initializes entry table */
                 inode_table[inumber].data.dirEntries = malloc(sizeof(DirEntry) * MAX_DIR_ENTRIES);
-                
+
+                /* Inits node lock */
+                if(pthread_rwlock_init(&inode_table[inumber].lock, NULL) != 0)
+                {
+                    fprintf(stderr, "Error: failed to initialize node lock.\n");
+                    exit(EXIT_FAILURE);
+                }
+
                 for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
                     inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
                 }
@@ -89,7 +98,12 @@ int inode_delete(int inumber) {
         printf("inode_delete: invalid inumber\n");
         return FAIL;
     } 
-
+    /* Node lock destruction */
+    if(pthread_rwlock_destroy(&inode_table[inumber].lock) != 0)
+    {
+        fprintf(stderr, "Error: failed to destroy node lock.\n");
+        exit(EXIT_FAILURE);
+    }
     inode_table[inumber].nodeType = T_NONE;
     /* see inode_table_destroy function */
     if (inode_table[inumber].data.dirEntries)

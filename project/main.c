@@ -19,10 +19,8 @@ int headQueue = 0;
 
 /* Global Locks */
 pthread_mutex_t commandlock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
-pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
-void execThreads(int sync);
+void execThreads();
 void destroy_locks();
 
 int insertCommand(char* data) {
@@ -106,13 +104,11 @@ void processInput(char* input_file){
     }
 }
 
-void applyCommands(int *sync){
-
-    int syncStrat = *sync; /*Removes value from pointer*/
+void applyCommands(){
 
     while (numberCommands > 0){
 
-        commandLockLock(syncStrat);
+        commandLockLock();
         
         const char* command = removeCommand();
         if (command == NULL){
@@ -129,18 +125,18 @@ void applyCommands(int *sync){
 
         int searchResult;
         
-        commandLockUnlock(syncStrat);
+        commandLockUnlock();
 
         switch (token) {
             case 'c':
                 switch (type) {
                     case 'f':
                         printf("Create file: %s\n", name);
-                        create(name, T_FILE, syncStrat);
+                        create(name, T_FILE);
                         break;
                     case 'd':
                         printf("Create directory: %s\n", name);
-                        create(name, T_DIRECTORY, syncStrat);
+                        create(name, T_DIRECTORY);
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
@@ -148,9 +144,7 @@ void applyCommands(int *sync){
                 }
                 break;
             case 'l': 
-                lockr(syncStrat);
                 searchResult = lookup(name);
-                unlock(syncStrat);
                 
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
@@ -159,7 +153,7 @@ void applyCommands(int *sync){
                 break;
             case 'd':
                 printf("Delete: %s\n", name);
-                delete(name, syncStrat);
+                delete(name);
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
@@ -172,7 +166,7 @@ void applyCommands(int *sync){
 
 /* Function that handles the initialization and closing of the threads. 
 Also applies the FS commands and handles execution time. */
-void execThreads(int sync)
+void execThreads()
 {
     int i;
     pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
@@ -187,7 +181,7 @@ void execThreads(int sync)
     {
         for(i = 0; i < numberThreads; i++)
         {
-            if(pthread_create(&tids[i], NULL, (void*) applyCommands, (void*) &sync) != 0)
+            if(pthread_create(&tids[i], NULL, (void*) applyCommands, NULL) != 0)
             {
                 fprintf(stderr, "Error: couldn't create thread.\n");
                 exit(EXIT_FAILURE);
@@ -204,7 +198,7 @@ void execThreads(int sync)
         }
     }
     else
-        applyCommands(&sync);
+        applyCommands();
 
 
     gettimeofday(&stop, NULL); 
@@ -221,7 +215,7 @@ int main(int argc, char* argv[])
 {
     /* Argument parsing */
     
-    if(argc != 5)
+    if(argc != 4)
     {
         fprintf(stderr, "Error: number of given arguments incorrect.\n");
         exit(EXIT_FAILURE);
@@ -233,19 +227,6 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE); 
     }
 
-    /* Sync strategy parse */
-    int syncStrat;
-    if (strcmp(argv[4], "mutex") == 0)
-        syncStrat = MUTEX;
-    else if (strcmp(argv[4], "rwlock") == 0)
-        syncStrat = RWLOCK;
-    else if (strcmp(argv[4], "nosync") == 0)
-        syncStrat = NOSYNC;
-    else
-    {
-        fprintf(stderr,"Error: invalid synchronization strategy.\n");
-        exit(EXIT_FAILURE);
-    }
     
     numberThreads = atoi(argv[3]);
 
@@ -254,7 +235,7 @@ int main(int argc, char* argv[])
 
     /* process input and print tree */
     processInput(argv[1]);
-    execThreads(syncStrat);
+    execThreads();
 
     FILE *out = fopen(argv[2], "w");
 
