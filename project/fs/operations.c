@@ -265,6 +265,7 @@ int lookup(char *name, pthread_rwlock_t **lookupLocks){
 
 	char full_path[MAX_FILE_NAME];
 	char delim[] = "/";
+	char *saveptr;
 
 	strcpy(full_path, name);
 
@@ -279,13 +280,13 @@ int lookup(char *name, pthread_rwlock_t **lookupLocks){
 	lockListAddRd(current_inumber, lookupLocks);
 	inode_get(current_inumber, &nType, &data);
 
-	char *path = strtok(full_path, delim);
+	char *path = strtok_r(full_path, delim, &saveptr); 
 
 	/* search for all sub nodes */
 	while (path != NULL && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
 		lockListAddRd(current_inumber, lookupLocks);
 		inode_get(current_inumber, &nType, &data);
-		path = strtok(NULL, delim);
+		path = strtok_r(NULL, delim, &saveptr); 
 	}
 	return current_inumber;
 }
