@@ -8,35 +8,59 @@
 #include "fs/operations.h"
 #include "lock.h"
 
-#define MAX_COMMANDS 150000
+#define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
 
 int numberThreads = 0;
 
+/* Input buffer and it's counter and index trackers */
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
-int headQueue = 0;
+int insertPtr = 0;
+int removePtr = 0;
 
-/* Global Locks */
+/* Global Lock and it's Conds */
 pthread_mutex_t commandlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t canInsert= PTHREAD_COND_INITIALIZER;
+pthread_cond_t canRemove = PTHREAD_COND_INITIALIZER;
 
-void execThreads();
-void destroy_locks();
+void execThreads(char* input);
 
 int insertCommand(char* data) {
-    if(numberCommands != MAX_COMMANDS) {
-        strcpy(inputCommands[numberCommands++], data);
-        return 1;
+    commandLockLock(commandlock);
+
+    while(numberCommands == MAX_COMMANDS) {
+        pthread_cond_wait(&canInsert, &commandlock);
     }
-    return 0;
+    strcpy(inputCommands[insertPtr++], data);
+
+    /* Keeps track of the total item counter and insertion index */
+    if(insertPtr == MAX_COMMANDS)
+        insertPtr = 0;
+    numberCommands++;
+
+    pthread_cond_signal(&canRemove);
+    commandLockUnlock(commandlock);
+    return 1;
 }
 
 char* removeCommand() {
-    if(numberCommands > 0){
-        numberCommands--;
-        return inputCommands[headQueue++];  
+    commandLockLock(commandlock);
+    char* command;
+
+    while(numberCommands == 0){
+        pthread_cond_wait(&canRemove, &commandlock);
     }
-    return NULL;
+    command = inputCommands[removePtr++];
+
+    /* Keeps track of the total item counter and insertion index */
+    if(removePtr == MAX_COMMANDS)
+        removePtr = 0;
+    numberCommands--;
+
+    pthread_cond_signal(&canInsert);
+    commandLockUnlock(commandlock); 
+    return command; 
 }
 
 void errorParse(){
@@ -46,9 +70,10 @@ void errorParse(){
 
 void processInput(char* input_file){
     char line[MAX_INPUT_SIZE];
+    char* input = (char*) input_file;
 
     /* Opens the input file in read mode */
-    FILE *in = fopen(input_file, "r");
+    FILE *in = fopen(input, "r");
     if (in == NULL)
     {
         fprintf(stderr, "Error: input file does not exist.\n");
@@ -110,8 +135,6 @@ void applyCommands(){
     pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
     while (numberCommands > 0){
 
-        commandLockLock();
-        
         const char* command = removeCommand();
         if (command == NULL){
             continue;
@@ -124,11 +147,7 @@ void applyCommands(){
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         }
-
         int searchResult;
-        
-        commandLockUnlock();
-
         switch (token) {
             case 'c':
                 switch (type) {
@@ -164,25 +183,39 @@ void applyCommands(){
             }
         }
     }
+    puts("Thread ended.");
     return;
 }
 
 /* Function that handles the initialization and closing of the threads. 
 Also applies the FS commands and handles execution time. */
-void execThreads()
+void execThreads(char* input)
 {
     int i;
-    pthread_t *tids = (pthread_t*) malloc(numberThreads * sizeof(pthread_t));
+    numberThreads++; /* Input thread always exists */
+    pthread_t *tids = (pthread_t*) malloc((numberThreads) * sizeof(pthread_t));
+
     struct timeval start, stop;
     double elapsed;    
 
     gettimeofday(&start, NULL); /* Gets the starting time.*/
 
     /* Thread management */
-    
-    if (numberThreads != 1)
+
+    /*Starts input parsing */
+    for(i = 0; i < numberThreads; i++)
     {
-        for(i = 0; i < numberThreads; i++)
+        /* Starts input insertion on first cycle*/
+        if(i == 0)
+        {
+            if(pthread_create(&tids[i], NULL, (void*) processInput, (void*) input) != 0)
+            {
+                fprintf(stderr, "Error: couldn't create input thread.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        /* Creates slave thread on every other cycle*/
+        else
         {
             if(pthread_create(&tids[i], NULL, (void*) applyCommands, NULL) != 0)
             {
@@ -190,20 +223,29 @@ void execThreads()
                 exit(EXIT_FAILURE);
             }
         }
+    }
 
-        for(i = 0; i < numberThreads; i++)
+    /*Joins child threads*/
+    for(i = 0; i < numberThreads; i++)
+    {
+        if(i == 0)
+        {
+            if(pthread_join(tids[i], NULL) != 0)
+            {
+                fprintf(stderr, "Error: couldn't join input insertion thread.\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
         {
             if(pthread_join(tids[i], NULL) != 0)
             {
                 fprintf(stderr, "Error: couldn't join thread.\n");
                 exit(EXIT_FAILURE);
-            }
+            }  
         }
     }
-    else
-        applyCommands();
-
-
+    
     gettimeofday(&stop, NULL); 
 
     /* Calculates the time elapsed */
@@ -236,9 +278,8 @@ int main(int argc, char* argv[])
     /* init filesystem */
     init_fs();
 
-    /* process input and print tree */
-    processInput(argv[1]);
-    execThreads();
+    /* Process input and create desired threads*/
+    execThreads(argv[1]);
 
     FILE *out = fopen(argv[2], "w");
 
@@ -257,7 +298,7 @@ int main(int argc, char* argv[])
     }
 
     /* Lock destruction */
-    destroyLocks();
+    destroyGlobalLock();
 
     /* release allocated memory */
     destroy_fs();

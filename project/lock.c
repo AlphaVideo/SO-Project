@@ -58,12 +58,24 @@ void commandLockUnlock()
     }
 }
 
-/* Destroys all global locks initialized in main. */
-void destroyLocks()
+/* Destroys the command lock and it's conditions. */
+void destroyGlobalLock()
 {
     if (pthread_mutex_destroy(&commandlock) != 0)
     {
         fprintf(stderr, "Error: couldn't destroy command lock.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if(pthread_cond_destroy(&canInsert) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy thread condition: canInsert\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if(pthread_cond_destroy(&canRemove) != 0)
+    {
+        fprintf(stderr, "Error: couldn't destroy thread condition: canRemove\n");
         exit(EXIT_FAILURE);
     }
 }
