@@ -18,6 +18,7 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int insertPtr = 0;
 int removePtr = 0;
+int inputFinished = 0;
 
 /* Global Lock and it's Conds */
 pthread_mutex_t commandlock = PTHREAD_MUTEX_INITIALIZER;
@@ -48,7 +49,7 @@ char* removeCommand() {
     commandLockLock(commandlock);
     char* command;
 
-    while(numberCommands == 0){
+    while(numberCommands == 0 && !inputFinished){
         pthread_cond_wait(&canRemove, &commandlock);
     }
     command = inputCommands[removePtr++];
@@ -121,19 +122,20 @@ void processInput(char* input_file){
             }
         }
     }
-
+    
     if(fclose(in) != 0)
     {
         fprintf(stderr, "Error: input file could not be closed.\n");
         exit(EXIT_FAILURE);
     }
+    inputFinished = 0;
 }
 
 void applyCommands(){
 
     /* Lookup function requires it's own external list */
     pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
-    while (numberCommands > 0){
+    while ((numberCommands > 0) && !inputFinished){
 
         const char* command = removeCommand();
         if (command == NULL){
@@ -251,7 +253,6 @@ void execThreads(char* input)
     /* Calculates the time elapsed */
     elapsed = ((double) stop.tv_sec + (double) (stop.tv_usec/1000000.0)) - ((double) start.tv_sec + (double) (start.tv_usec/1000000.0));
     printf("TecnicoFS completed in %.4f seconds.\n", elapsed);
-
     free(tids);
 }
 
