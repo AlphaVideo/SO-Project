@@ -19,6 +19,7 @@ int numberCommands = 0;
 int insertPtr = 0;
 int removePtr = 0;
 int inputFinished = 0;
+int consumersFinished = 0;
 
 /* Global Lock and it's Conds */
 pthread_mutex_t commandlock = PTHREAD_MUTEX_INITIALIZER;
@@ -131,6 +132,10 @@ void processInput(char* input_file){
 
     /* Tells consumer threads that if numberCommands == 0, they can end */
     inputFinished = 1;
+    
+    /* Prevents rare case where consumers sneak into the wait while inputFinished is updated*/
+    while(consumersFinished != (numberThreads -1))
+        pthread_cond_signal(&canRemove);
 }
 
 void applyCommands(){
@@ -165,6 +170,8 @@ void applyCommands(){
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
+                        printf("Command: %s", command); /*Debug*/
+                        printf("Node type: %c\n", type); /*Debug*/
                         exit(EXIT_FAILURE);
                 }
                 break;
@@ -187,6 +194,7 @@ void applyCommands(){
             }
         }
     }
+    consumersFinished++;
     return;
 }
 
