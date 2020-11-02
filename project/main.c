@@ -128,14 +128,16 @@ void processInput(char* input_file){
         fprintf(stderr, "Error: input file could not be closed.\n");
         exit(EXIT_FAILURE);
     }
-    inputFinished = 0;
+
+    /* Tells consumer threads that if numberCommands == 0, they can end */
+    inputFinished = 1;
 }
 
 void applyCommands(){
 
     /* Lookup function requires it's own external list */
     pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
-    while ((numberCommands > 0) && !inputFinished){
+    while ((numberCommands > 0) || !inputFinished){
 
         const char* command = removeCommand();
         if (command == NULL){
@@ -185,7 +187,6 @@ void applyCommands(){
             }
         }
     }
-    puts("Thread ended.");
     return;
 }
 
@@ -221,7 +222,7 @@ void execThreads(char* input)
         {
             if(pthread_create(&tids[i], NULL, (void*) applyCommands, NULL) != 0)
             {
-                fprintf(stderr, "Error: couldn't create thread.\n");
+                fprintf(stderr, "Error: couldn't create consumer thread.\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -242,7 +243,7 @@ void execThreads(char* input)
         {
             if(pthread_join(tids[i], NULL) != 0)
             {
-                fprintf(stderr, "Error: couldn't join thread.\n");
+                fprintf(stderr, "Error: couldn't join consumer thread.\n");
                 exit(EXIT_FAILURE);
             }  
         }
