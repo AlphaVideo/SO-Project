@@ -47,7 +47,7 @@ int insertCommand(char* data) {
 }
 
 char* removeCommand() {
-    commandLockLock(commandlock);
+    /* Locking is done externally to protect later scan of the returned address */
     char* command;
 
     while(numberCommands == 0 && !inputFinished){
@@ -61,7 +61,6 @@ char* removeCommand() {
     numberCommands--;
 
     pthread_cond_signal(&canInsert);
-    commandLockUnlock(commandlock); 
     return command; 
 }
 
@@ -144,6 +143,7 @@ void applyCommands(){
     pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
     while ((numberCommands > 0) || !inputFinished){
 
+        commandLockLock(commandlock);
         const char* command = removeCommand();
         if (command == NULL){
             continue;
@@ -152,6 +152,8 @@ void applyCommands(){
         char token, type;
         char name[MAX_INPUT_SIZE];
         int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
+        commandLockUnlock(commandlock); 
+
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
@@ -170,8 +172,6 @@ void applyCommands(){
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
-                        printf("Command: %s", command); /*Debug*/
-                        printf("Node type: %c\n", type); /*Debug*/
                         exit(EXIT_FAILURE);
                 }
                 break;
