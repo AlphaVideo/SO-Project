@@ -47,7 +47,7 @@ int insertCommand(char* data) {
 }
 
 char* removeCommand() {
-    /* Locking is done externally to protect later scan of the returned address */
+    /* Locking and signalling is done externally to protect later scan of the returned address */
     char* command;
 
     while(numberCommands == 0 && !inputFinished){
@@ -60,7 +60,6 @@ char* removeCommand() {
         removePtr = 0;
     numberCommands--;
 
-    pthread_cond_signal(&canInsert);
     return command; 
 }
 
@@ -144,6 +143,7 @@ void applyCommands(){
     while ((numberCommands > 0) || !inputFinished){
 
         commandLockLock(commandlock);
+        
         const char* command = removeCommand();
         if (command == NULL){
             continue;
@@ -152,6 +152,8 @@ void applyCommands(){
         char token, type;
         char name[MAX_INPUT_SIZE];
         int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
+
+        pthread_cond_signal(&canInsert);
         commandLockUnlock(commandlock); 
 
         if (numTokens < 2) {
