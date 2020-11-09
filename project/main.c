@@ -141,20 +141,25 @@ void applyCommands(){
     /* Lookup function requires it's own external list */
     pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
     while ((numberCommands > 0) || !inputFinished){
-
-        commandLockLock(commandlock);
         
+        commandLockLock(commandlock);
+
+        char commandCopy[MAX_INPUT_SIZE];
         const char* command = removeCommand();
+        
         if (command == NULL){
+            commandLockUnlock(commandlock);
             continue;
         }
+        else
+            strcpy(commandCopy, command);
+
+        pthread_cond_signal(&canInsert);
+        commandLockUnlock(commandlock);
 
         char token, type;
         char name[MAX_INPUT_SIZE];
-        int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
-
-        pthread_cond_signal(&canInsert);
-        commandLockUnlock(commandlock); 
+        int numTokens = sscanf(commandCopy, "%c %s %c", &token, name, &type);
 
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
