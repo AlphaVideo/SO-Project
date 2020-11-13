@@ -41,7 +41,11 @@ int insertCommand(char* data) {
         insertPtr = 0;
     numberCommands++;
 
-    pthread_cond_signal(&canRemove);
+    if(pthread_cond_signal(&canRemove) != 0)
+    {
+        fprintf(stderr, "Error: couldn't signal cond canRemove.\n");
+        exit(EXIT_FAILURE);
+    }
     commandLockUnlock(commandlock);
     return 1;
 }
@@ -133,7 +137,13 @@ void processInput(char* input_file){
     
     /* Prevents rare case where consumers sneak into the wait while inputFinished is updated*/
     while(consumersFinished != (numberThreads -1))
-        pthread_cond_signal(&canRemove);
+    {
+        if(pthread_cond_signal(&canRemove) != 0)
+        {
+            fprintf(stderr, "Error: couldn't signal cond canRemove.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 void applyCommands(){
@@ -154,7 +164,11 @@ void applyCommands(){
         else
             strcpy(commandCopy, command);
 
-        pthread_cond_signal(&canInsert);
+        if(pthread_cond_signal(&canInsert) != 0)
+        {
+            fprintf(stderr, "Error: couldn't signal cond canInsert.\n");
+            exit(EXIT_FAILURE);
+        }
         commandLockUnlock(commandlock);
 
         char token, type;
