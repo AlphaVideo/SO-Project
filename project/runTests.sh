@@ -23,3 +23,12 @@ if ! [[ $maxthreads =~ $validint ]];
         exit 1
 fi
 
+for input in ${inputdir}/*.txt
+do
+ for threadnum in $(seq 1 ${maxthreads})
+ do
+  filename=${input##*/}
+  echo InputFile=${filename%.*} NumThreads=${threadnum}
+  ./tecnicofs < "tecnicofs" "${input}" "${outputdir}/${filename%.*}-${threadnum}.txt" "${threadnum}" | grep "TecnicoFS"
+ done
+done
