@@ -291,6 +291,75 @@ int lookup(char *name, pthread_rwlock_t **lookupLocks){
 	return current_inumber;
 }
 
+/*
+ * Move file or directory to a new path.
+ * Input:
+ *  - origPath: starting path (already verified that exists)
+ *  - destPath: destination path (must be in an existent directory, but must not exist)
+ * Returns: SUCCESS or FAIL
+ */
+int move(char *origPath, char *destPath)
+{
+	pthread_rwlock_t *lockList[INODE_TABLE_SIZE] = {NULL};
+	/* Destination parameters */
+	int destParentInumber, destination_inumber;
+	char *destParentName, *destChildName;
+	/* Origin parameters */
+	int origParentInumber, origin_inumber;
+	char *origParentName, *origChildName;
+
+	/* Split parent_child_from _path will alter paths*/
+	char destPathCopy[MAX_PATH_SIZE], origPathCopy[MAX_PATH_SIZE];
+	strcpy(destPathCopy, destPath);
+	strcpy(origPathCopy, origPath);
+
+	split_parent_child_from_path(destPathCopy, &destParentName, &destChildName);
+	split_parent_child_from_path(origPathCopy, &origParentName, &origChildName);
+
+	/* Destination path's parent directory must exist, but child must not exist */
+
+	destParentInumber = lookup(destParentName, lockList);
+	if (destParentInumber == FAIL) 
+	{
+		printf("failed to move %s to %s, invalid destination parent dir %s\n", origPath, destPath, destParentName);
+		lockListClear(lockList);
+		return FAIL;
+	}
+
+	destination_inumber = lookup(destPath, lockList);
+	if(destination_inumber != FAIL)
+	{
+		printf("failed to move %s to %s, destination path %s already exists\n", origPath, destPath, destChildName);
+		lockListClear(lockList);
+		return FAIL;
+	}
+	
+	/* The order of the operations is based on the inumbers of the origin and destination */
+	origin_inumber = lookup(origPath, lockList);
+
+	if(destParentInumber > origin_inumber)
+	{
+		lockListSwitchToWr(destParentInumber, lockList);
+		dir_add_entry(destParentInumber, origin_inumber, destChildName);
+
+		origParentInumber = lookup(origParentName, lockList);
+		lockListSwitchToWr(origin_inumber, lockList);
+		dir_reset_entry(origParentInumber, origin_inumber);
+
+	}
+	else
+	{
+		origParentInumber = lookup(origParentName, lockList);
+		lockListSwitchToWr(origin_inumber, lockList);
+		dir_reset_entry(origParentInumber, origin_inumber);
+
+		lockListSwitchToWr(destParentInumber, lockList);
+		dir_add_entry(destParentInumber, origin_inumber, destChildName);
+	}
+
+	lockListClear(lockList);
+	return SUCCESS;
+}
 
 /*
  * Prints tecnicofs tree.

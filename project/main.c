@@ -116,6 +116,13 @@ void processInput(char* input_file){
                 if(insertCommand(line))
                     break;
                 return;
+
+            case 'm':
+                if(numTokens != 3)
+                    errorParse();
+                if(insertCommand(line))
+                    break;
+                return;
             
             case '#':
                 break;
@@ -171,18 +178,21 @@ void applyCommands(){
         }
         commandLockUnlock(commandlock);
 
-        char token, type;
+        char token;
         char name[MAX_INPUT_SIZE];
-        int numTokens = sscanf(commandCopy, "%c %s %c", &token, name, &type);
+        char typeOrPath[MAX_INPUT_SIZE];
+        int numTokens = sscanf(commandCopy, "%c %s %s", &token, name, typeOrPath);
 
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         }
         int searchResult;
+        int validPath;
         switch (token) {
             case 'c':
-                switch (type) {
+                /* For create, we only use the first character for the type */
+                switch (typeOrPath[0]) {
                     case 'f':
                         printf("Create file: %s\n", name);
                         create(name, T_FILE);
@@ -208,6 +218,17 @@ void applyCommands(){
             case 'd':
                 printf("Delete: %s\n", name);
                 delete(name);
+                break;
+            case 'm':
+                /* For m, we need to use typeOrPath as a string */
+                printf("Move: %s to %s\n", name, typeOrPath);
+                validPath = lookup(name, lookupLocks); 
+                if (validPath < 0)
+                {
+                    printf("Error: starting pathname does not exist.\n");
+                    break;
+                }
+                move(name, typeOrPath);
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
