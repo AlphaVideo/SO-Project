@@ -299,3 +299,14 @@ void lockListClear(pthread_rwlock_t **lockList)
         }
     }
 }
+
+/* Unlocks excess read locks on move operation's locks */
+void moveMergeLocks(pthread_rwlock_t **destLocks, pthread_rwlock_t **origLocks)
+{
+    int i;
+    for(i = 0; i < INODE_TABLE_SIZE; i++)
+    {
+        if(destLocks[i] != NULL && origLocks[i] != NULL)
+            unlock(destLocks[i]);
+    }
+}

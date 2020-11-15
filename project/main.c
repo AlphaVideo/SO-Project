@@ -225,7 +225,7 @@ void applyCommands(){
                 validPath = lookup(name, lookupLocks); 
                 if (validPath < 0)
                 {
-                    printf("Error: starting pathname does not exist.\n");
+                    printf("Error: origin pathname does not exist.\n");
                     break;
                 }
                 move(name, typeOrPath);
