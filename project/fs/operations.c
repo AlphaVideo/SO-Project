@@ -300,15 +300,20 @@ int lookup(char *name, pthread_rwlock_t **lookupLocks){
  */
 int move(char *origPath, char *destPath)
 {
-	/* A lock list for each lookup */
-	pthread_rwlock_t *destLocks1[INODE_TABLE_SIZE] = {NULL};
-	pthread_rwlock_t *destLocks2[INODE_TABLE_SIZE] = {NULL};
-	pthread_rwlock_t *originLocks1[INODE_TABLE_SIZE] = {NULL};
-	pthread_rwlock_t *originLocks2[INODE_TABLE_SIZE] = {NULL};
+	/*USAR SO UMA LISTA DE TRINCOS
+	USAR INODE_GET
+	SO E PRECISO DE DOIS LOOKUPS
+	m /a/b c
+	*/
+
+	pthread_rwlock_t *lockList[INODE_TABLE_SIZE] = {NULL};
 
 	/* Destination parameters */
 	int destParentInumber, destination_inumber;
 	char *destParentName, *destChildName;
+	type destParentType;
+	union Data destParentData;
+
 	/* Origin parameters */
 	int origParentInumber, origin_inumber;
 	char *origParentName, *origChildName;
@@ -323,54 +328,67 @@ int move(char *origPath, char *destPath)
 
 	/* Destination path's parent directory must exist, but child must not exist */
 
-	destParentInumber = lookup(destParentName, destLocks1);
+	destParentInumber = lookup(destParentName, lockList);
+
+	/* Destination parent directory must exist */
 	if (destParentInumber == FAIL) 
 	{
 		printf("failed to move %s to %s, invalid destination parent dir %s\n", origPath, destPath, destParentName);
-		lockListClear(destLocks1);
+		lockListClear(lockList);
 		return FAIL;
 	}
 
-	destination_inumber = lookup(destPath, destLocks2);
-	lockListClear(destLocks1); /* No longer necessary */
+	/* Destination can't already exist */
+	inode_get(destParentInumber, &destParentType, &destParentData);
+	destination_inumber = lookup_sub_node(destChildName, destParentData.dirEntries);
 
 	if(destination_inumber != FAIL)
 	{
 		printf("failed to move %s to %s, destination path %s already exists\n", origPath, destPath, destChildName);
-		lockListClear(destLocks2);
+		lockListClear(lockList);
 		return FAIL;
 	}
-	
-	/* The order of the operations is based on the inumbers of the origin and destination */
 
+	/* Can't move directory into itself */
 	origin_inumber = lookup(origPath, originLocks1);
+	if(origin_inumber == destParentInumber)
+	{
+		printf("failed to move %s to %s, can't move directory into itself\n", origPath, destPath);
+		lockListClear(destLocks2);
+		lockListClear(originLocks1);
+		return FAIL;
+	}
+
 	origParentInumber = lookup(origParentName, originLocks2);
 	lockListClear(originLocks1); /* No longer necessary */
 
 	moveMergeLocks(destLocks2, originLocks2);
 	
+	/* The order of the operations is based on the inumbers of the origin and destination */
 	if(destParentInumber > origin_inumber)
 	{
 		/* Move with new name */
+		lockListSwitchToWr(destParentInumber, destLocks2);
 		dir_add_entry(destParentInumber, origin_inumber, destChildName);
-		lockListClear(destLocks2);
 
 		/* Delete original */
+		lockListSwitchToWr(origParentInumber, originLocks2);
 		dir_reset_entry(origParentInumber, origin_inumber);
-		lockListClear(originLocks2);
 
 	}
 	else
 	{
 		/* Delete original */
+		lockListSwitchToWr(origParentInumber, originLocks2);
 		dir_reset_entry(origParentInumber, origin_inumber);
-		lockListClear(originLocks2);
 
 		/* Move with new name */
+		lockListSwitchToWr(destParentInumber, destLocks2);
 		dir_add_entry(destParentInumber, origin_inumber, destChildName);
-		lockListClear(destLocks2);
 	}
 
+	lockListClear(originLocks2);
+	lockListClear(destLocks2);
 	return SUCCESS;
 }
 

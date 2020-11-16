@@ -145,9 +145,9 @@ void processInput(char* input_file){
     /* Prevents rare case where consumers sneak into the wait while inputFinished is updated*/
     while(consumersFinished != (numberThreads -1))
     {
-        if(pthread_cond_signal(&canRemove) != 0)
+        if(pthread_cond_broadcast(&canRemove) != 0)
         {
-            fprintf(stderr, "Error: couldn't signal cond canRemove.\n");
+            fprintf(stderr, "Error: couldn't broadcast cond canRemove.\n");
             exit(EXIT_FAILURE);
         }
     }
@@ -164,7 +164,7 @@ void applyCommands(){
         char commandCopy[MAX_INPUT_SIZE];
         const char* command = removeCommand();
         
-        if (command == NULL){
+        if (command == NULL || strcmp(command, "") == 0){
             commandLockUnlock(commandlock);
             continue;
         }
@@ -226,8 +226,10 @@ void applyCommands(){
                 if (validPath < 0)
                 {
                     printf("Error: origin pathname does not exist.\n");
+                    lockListClear(lookupLocks);
                     break;
                 }
+                lockListClear(lookupLocks);
                 move(name, typeOrPath);
                 break;
             default: { /* error */

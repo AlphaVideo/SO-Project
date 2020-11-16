@@ -274,14 +274,13 @@ void lockListAddWr(int inumber, pthread_rwlock_t **lockList)
 /* Used for setting parent directories to write mode before using create/delete.*/
 void lockListSwitchToWr(int inumber, pthread_rwlock_t **lockList)
 {
-    if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
-        printf("inode_get: invalid inumber %d\n", inumber);
-        return;
-    }
-
     if(lockList[inumber] != NULL)
     {
         unlock(lockList[inumber]);
+        if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
+            printf("inode_get: invalid inumber %d\n", inumber);
+            return;
+        }
         lockwr(lockList[inumber]);
     }
 }
@@ -307,6 +306,9 @@ void moveMergeLocks(pthread_rwlock_t **destLocks, pthread_rwlock_t **origLocks)
     for(i = 0; i < INODE_TABLE_SIZE; i++)
     {
         if(destLocks[i] != NULL && origLocks[i] != NULL)
+        {
             unlock(destLocks[i]);
+            destLocks[i] = NULL;
+        }
     }
 }
