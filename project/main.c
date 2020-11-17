@@ -32,7 +32,11 @@ int insertCommand(char* data) {
     commandLockLock(commandlock);
 
     while(numberCommands == MAX_COMMANDS) {
-        pthread_cond_wait(&canInsert, &commandlock);
+        if(pthread_cond_wait(&canInsert, &commandlock) != 0)
+        {
+            fprintf(stderr, "Error: failed to wait for canInsert.\n");
+            exit(EXIT_FAILURE);
+        }
     }
     strcpy(inputCommands[insertPtr++], data);
 
@@ -55,7 +59,11 @@ char* removeCommand() {
     char* command;
 
     while(numberCommands == 0 && !inputFinished){
-        pthread_cond_wait(&canRemove, &commandlock);
+        if(pthread_cond_wait(&canRemove, &commandlock) != 0)
+        {
+            fprintf(stderr, "Error: failed to wait for canRemove.\n");
+            exit(EXIT_FAILURE);
+        }
     }
     command = inputCommands[removePtr++];
 

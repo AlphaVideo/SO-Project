@@ -63,6 +63,6 @@ void lockListAddRd(int inumber, pthread_rwlock_t **lockList);
 void lockListAddWr(int inumber, pthread_rwlock_t **lockList);
 void lockListSwitchToWr(int inumber, pthread_rwlock_t **lockList);
 void lockListClear(pthread_rwlock_t **lockList);
-void moveMergeLocks(pthread_rwlock_t **destLocks, pthread_rwlock_t **origLocks);
+void lockListUnlock(int inumber, pthread_rwlock_t** lockList);
 
 #endif /* INODES_H */

@@ -300,13 +300,8 @@ int lookup(char *name, pthread_rwlock_t **lookupLocks){
  */
 int move(char *origPath, char *destPath)
 {
-	/*USAR SO UMA LISTA DE TRINCOS
-	USAR INODE_GET
-	SO E PRECISO DE DOIS LOOKUPS
-	m /a/b c
-	*/
-
-	pthread_rwlock_t *lockList[INODE_TABLE_SIZE] = {NULL};
+	pthread_rwlock_t *destLocks[INODE_TABLE_SIZE] = {NULL};
+	pthread_rwlock_t *origLocks[INODE_TABLE_SIZE] = {NULL};
 
 	/* Destination parameters */
 	int destParentInumber, destination_inumber;
@@ -317,6 +312,8 @@ int move(char *origPath, char *destPath)
 	/* Origin parameters */
 	int origParentInumber, origin_inumber;
 	char *origParentName, *origChildName;
+	type origParentType;
+	union Data origParentData;
 
 	/* Split parent_child_from _path will alter paths*/
 	char destPathCopy[MAX_PATH_SIZE], origPathCopy[MAX_PATH_SIZE];
@@ -326,69 +323,81 @@ int move(char *origPath, char *destPath)
 	split_parent_child_from_path(destPathCopy, &destParentName, &destChildName);
 	split_parent_child_from_path(origPathCopy, &origParentName, &origChildName);
 
-	/* Destination path's parent directory must exist, but child must not exist */
-
-	destParentInumber = lookup(destParentName, lockList);
+	destParentInumber = lookup(destParentName, destLocks);
 
 	/* Destination parent directory must exist */
 	if (destParentInumber == FAIL) 
 	{
 		printf("failed to move %s to %s, invalid destination parent dir %s\n", origPath, destPath, destParentName);
-		lockListClear(lockList);
+		lockListClear(destLocks);
 		return FAIL;
 	}
 
-	/* Destination can't already exist */
 	inode_get(destParentInumber, &destParentType, &destParentData);
 	destination_inumber = lookup_sub_node(destChildName, destParentData.dirEntries);
 
+	/* Destination can't already exist */
 	if(destination_inumber != FAIL)
 	{
 		printf("failed to move %s to %s, destination path %s already exists\n", origPath, destPath, destChildName);
-		lockListClear(lockList);
+		lockListClear(destLocks);
 		return FAIL;
 	}
 
+	origParentInumber = lookup(origParentName, origLocks);
+	inode_get(origParentInumber, &origParentType, &origParentData);
+	origin_inumber = lookup_sub_node(origChildName, origParentData.dirEntries);
+
 	/* Can't move directory into itself */
-	origin_inumber = lookup(origPath, originLocks1);
 	if(origin_inumber == destParentInumber)
 	{
 		printf("failed to move %s to %s, can't move directory into itself\n", origPath, destPath);
-		lockListClear(destLocks2);
-		lockListClear(originLocks1);
+		lockListClear(destLocks);
+		lockListClear(origLocks);
 		return FAIL;
 	}
 
-	origParentInumber = lookup(origParentName, originLocks2);
-	lockListClear(originLocks1); /* No longer necessary */
-
-	moveMergeLocks(destLocks2, originLocks2);
-	
-	/* The order of the operations is based on the inumbers of the origin and destination */
-	if(destParentInumber > origin_inumber)
+	/* The order of the operations is based on the inumbers of the parents to be locked in write mode */
+	if(destParentInumber > origParentInumber)
 	{
 		/* Move with new name */
-		lockListSwitchToWr(destParentInumber, destLocks2);
+		if(origLocks[destParentInumber] != NULL && destLocks[destParentInumber] != NULL)
+		{
+			/* Removes excess read on opposite lock list*/
+			lockListUnlock(destParentInumber, origLocks); 
+			lockListSwitchToWr(destParentInumber, destLocks);
+		}
+		else
+			lockListSwitchToWr(destParentInumber, destLocks);
 		dir_add_entry(destParentInumber, origin_inumber, destChildName);
+		lockListClear(destLocks);
 
 		/* Delete original */
-		lockListSwitchToWr(origParentInumber, originLocks2);
+		lockListSwitchToWr(origParentInumber, origLocks);
 		dir_reset_entry(origParentInumber, origin_inumber);
+		lockListClear(origLocks);
 
 	}
 	else
 	{
 		/* Delete original */
-		lockListSwitchToWr(origParentInumber, originLocks2);
+		if(origLocks[origParentInumber] != NULL && destLocks[origParentInumber] != NULL)
+		{
+			/* Removes excess read on opposite lock list*/
+			lockListUnlock(origParentInumber, destLocks); 
+			lockListSwitchToWr(origParentInumber, origLocks);
+		}
+		else
+			lockListSwitchToWr(origParentInumber, origLocks);
 		dir_reset_entry(origParentInumber, origin_inumber);
+		lockListClear(origLocks);
 
 		/* Move with new name */
-		lockListSwitchToWr(destParentInumber, destLocks2);
+		lockListSwitchToWr(destParentInumber, destLocks);
 		dir_add_entry(destParentInumber, origin_inumber, destChildName);
+		lockListClear(destLocks);
 	}
-
-	lockListClear(originLocks2);
-	lockListClear(destLocks2);
+	
 	return SUCCESS;
 }
 

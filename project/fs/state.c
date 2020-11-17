@@ -250,7 +250,7 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
 void lockListAddRd(int inumber, pthread_rwlock_t **lockList)
 {
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
-        printf("inode_get: invalid inumber %d\n", inumber);
+        printf("lockListAddRd: invalid inumber %d\n", inumber);
         return;
     }
 
@@ -263,7 +263,7 @@ void lockListAddRd(int inumber, pthread_rwlock_t **lockList)
 void lockListAddWr(int inumber, pthread_rwlock_t **lockList)
 {
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
-        printf("inode_get: invalid inumber %d\n", inumber);
+        printf("lockListAddWr: invalid inumber %d\n", inumber);
         return;
     }
 
@@ -278,7 +278,7 @@ void lockListSwitchToWr(int inumber, pthread_rwlock_t **lockList)
     {
         unlock(lockList[inumber]);
         if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
-            printf("inode_get: invalid inumber %d\n", inumber);
+            printf("lockListSwitchToWr: invalid inumber %d\n", inumber);
             return;
         }
         lockwr(lockList[inumber]);
@@ -299,16 +299,12 @@ void lockListClear(pthread_rwlock_t **lockList)
     }
 }
 
-/* Unlocks excess read locks on move operation's locks */
-void moveMergeLocks(pthread_rwlock_t **destLocks, pthread_rwlock_t **origLocks)
+/* Unlocks given inumber's lock and points the list's index to null */
+void lockListUnlock(int inumber, pthread_rwlock_t** lockList)
 {
-    int i;
-    for(i = 0; i < INODE_TABLE_SIZE; i++)
+    if(lockList[inumber] != NULL)
     {
-        if(destLocks[i] != NULL && origLocks[i] != NULL)
-        {
-            unlock(destLocks[i]);
-            destLocks[i] = NULL;
-        }
+        unlock(lockList[inumber]);
+        lockList[inumber] = NULL;
     }
 }
