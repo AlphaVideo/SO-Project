@@ -5,6 +5,9 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 #include "fs/operations.h"
 #include "lock.h"
 
@@ -12,6 +15,11 @@
 #define MAX_INPUT_SIZE 100
 
 int numberThreads = 0;
+
+/* Socket variables */
+int sockfd;
+struct sockaddr_un serverAddr;
+socklen_t addrlen;
 
 /* Input buffer and it's counter and index trackers */
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
@@ -26,7 +34,10 @@ pthread_mutex_t commandlock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t canInsert= PTHREAD_COND_INITIALIZER;
 pthread_cond_t canRemove = PTHREAD_COND_INITIALIZER;
 
+void init_socket(char* path);
 void execThreads(char* input);
+void receive_command();
+void close_socket(char* path);
 
 int insertCommand(char* data) {
     commandLockLock(commandlock);
@@ -317,50 +328,111 @@ void execThreads(char* input)
     free(tids);
 }
 
+/* Creates and binds a new socket with the path given by main */
+void init_socket(char* path)
+{
+    struct sockaddr_un *addr = &serverAddr;
+    if ((sockfd = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) 
+    {
+        fprintf(stderr, "TecnicoFS: can't open socket at %s\n", path);
+        exit(EXIT_FAILURE);
+    }
+    unlink(path);
+
+    if (addr == NULL)
+        addrlen = 0;
+
+    bzero((char *)addr, sizeof(struct sockaddr_un));
+    addr->sun_family = AF_UNIX;
+    strcpy(addr->sun_path, path);
+
+    addrlen = SUN_LEN(addr);
+
+    if (bind(sockfd, (struct sockaddr *) addr, addrlen) < 0) 
+    {
+        fprintf(stderr, "TecnicoFS: bind error\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void receive_command()
+{
+    while (1) 
+    {
+        struct sockaddr_un clientAddr;
+        char in_buffer[MAX_INPUT_SIZE];
+        int c; /* Number of bytes read */
+
+        addrlen = sizeof(struct sockaddr_un);
+        c = recvfrom(sockfd, in_buffer, sizeof(in_buffer)-1, 0, (struct sockaddr *)&clientAddr, &addrlen);
+        if (c <= 0) 
+            continue; //Failed to read or read 0
+        //Preventivo, caso o cliente nao tenha terminado a mensagem em '\0', 
+        in_buffer[c]='\0';
+        
+        /* Prints command from client to stdout */
+        printf("%s", in_buffer);
+    }
+}
+
+/* Closes the socket with the given path */
+void close_socket(char* path)
+{
+    close(sockfd);
+    unlink(path);
+}
+
 
 int main(int argc, char* argv[]) 
 {
     /* Argument parsing */
     
-    if(argc != 4)
+    if(argc != 3)
     {
         fprintf(stderr, "Error: number of given arguments incorrect.\n");
         exit(EXIT_FAILURE);
     }
     
-    if(atoi(argv[3]) == 0)
+    if(atoi(argv[1]) <= 0)
     {
         fprintf(stderr, "Error: number of threads given incorrect.\n");
         exit(EXIT_FAILURE); 
     }
 
     
-    numberThreads = atoi(argv[3]);
+    numberThreads = atoi(argv[1]);
 
     /* init filesystem */
     init_fs();
 
-    /* Process input and create desired threads*/
-    execThreads(argv[1]);
+    /* Init datagram socket */
+    init_socket(argv[2]);
 
-    FILE *out = fopen(argv[2], "w");
+    receive_command();
 
-    if(out == NULL)
-    {
-        fprintf(stderr, "Error: output file couldn't be created.\n");
-        exit(EXIT_FAILURE);
-    }
+    // /* Process input and create desired threads*/
+    // execThreads(argv[1]);
 
-    print_tecnicofs_tree(out);
+    // FILE *out = fopen(argv[2], "w");
 
-    if(fclose(out) != 0)
-    {
-        fprintf(stderr, "Error: input file could not be closed.\n");
-        exit(EXIT_FAILURE);
-    }
+    // if(out == NULL)
+    // {
+    //     fprintf(stderr, "Error: output file couldn't be created.\n");
+    //     exit(EXIT_FAILURE);
+    // }
 
-    /* Lock destruction */
-    destroyGlobalLock();
+    // print_tecnicofs_tree(out);
+
+    // if(fclose(out) != 0)
+    // {
+    //     fprintf(stderr, "Error: input file could not be closed.\n");
+    //     exit(EXIT_FAILURE);
+    // }
+
+    // /* Lock destruction */
+    // destroyGlobalLock();
+
+    close_socket(argv[2]);
 
     /* release allocated memory */
     destroy_fs();

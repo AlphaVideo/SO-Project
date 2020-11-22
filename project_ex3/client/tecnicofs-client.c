@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "tecnicofs-client-api.h"
 #include "../tecnicofs-api-constants.h"
 
@@ -21,7 +22,7 @@ static void parseArgs (long argc, char* const argv[]) {
 
     inputFile = fopen(argv[1], "r");
 
-    if (inputFile== NULL) {
+    if (inputFile == NULL) {
         fprintf(stderr, "Error: cannot open input file\n");
         exit(EXIT_FAILURE);
     }
@@ -119,7 +120,14 @@ int main(int argc, char* argv[]) {
       exit(EXIT_FAILURE);
     }
 
-    processInput();
+    //processInput();
+    //TEMP -> Read from input file directly into server
+    char line[MAX_INPUT_SIZE];
+
+    while (fgets(line, sizeof(line)/sizeof(char), inputFile))
+        tfsCreate(line, '-');
+
+    fclose(inputFile);
 
     tfsUnmount();
 
