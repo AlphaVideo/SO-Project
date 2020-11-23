@@ -30,6 +30,8 @@ void applyCommands(){
 
     /* Lookup function requires it's own external list */
     pthread_rwlock_t *lookupLocks[INODE_TABLE_SIZE] = {NULL};
+
+    //while(1)
         
     //Have client addr and client length that is reset every cycle
     //Keep it stored after receive_command to send the result back
