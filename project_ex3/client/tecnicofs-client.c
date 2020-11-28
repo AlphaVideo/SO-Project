@@ -47,6 +47,7 @@ void *processInput() {
         if (numTokens < 1) {
             continue;
         }
+
         switch (op) {
             case 'c':
                 if(numTokens != 3) {
@@ -120,15 +121,8 @@ int main(int argc, char* argv[]) {
       exit(EXIT_FAILURE);
     }
 
-    //processInput();
-    //TEMP -> Read from input file directly into server
-    char line[MAX_INPUT_SIZE];
-
-    while (fgets(line, sizeof(line)/sizeof(char), inputFile))
-        tfsCreate(line, '-');
-
-    fclose(inputFile);
-
+    processInput();
+    
     tfsUnmount();
 
     exit(EXIT_SUCCESS);

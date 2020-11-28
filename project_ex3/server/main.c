@@ -22,8 +22,8 @@ socklen_t serverlen;
 
 void init_socket(char* path);
 void execThreads(int nThreads);
-char* receive_command(struct sockaddr_un clientAddr, socklen_t clilen);
-void send_result(struct sockaddr_un clientAddr, socklen_t clilen, int res);
+char* receive_command(struct sockaddr_un *clientAddr, socklen_t clilen);
+void send_result(struct sockaddr_un *clientAddr, socklen_t clilen, int res);
 void close_socket(char* path);
 
 void applyCommands(){
@@ -34,11 +34,9 @@ void applyCommands(){
     while(1)
     {
         struct sockaddr_un clientAddr;
-        socklen_t clilen = sizeof(struct sockaddr_un);;
+        socklen_t clilen = sizeof(struct sockaddr_un);
 
-        const char* command = receive_command(clientAddr, clilen);
-        printf("Command:%s",command);
-        continue;
+        const char* command = receive_command(&clientAddr, clilen);
         
         if (command == NULL || strcmp(command, "") == 0){
             continue;
@@ -64,12 +62,12 @@ void applyCommands(){
                     case 'f':
                         printf("Create file: %s\n", name);
                         r = create(name, T_FILE);
-                        send_result(clientAddr, clilen, r);
+                        send_result(&clientAddr, clilen, r);
                         break;
                     case 'd':
                         printf("Create directory: %s\n", name);
                         r = create(name, T_DIRECTORY);
-                        send_result(clientAddr, clilen, r);
+                        send_result(&clientAddr, clilen, r);
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
@@ -84,12 +82,12 @@ void applyCommands(){
                 else
                     printf("Search: %s not found\n", name);
                 lockListClear(lookupLocks);
-                send_result(clientAddr, clilen, searchResult);
+                send_result(&clientAddr, clilen, searchResult);
                 break;
             case 'd':
                 printf("Delete: %s\n", name);
                 r = delete(name);
-                send_result(clientAddr, clilen, r);
+                send_result(&clientAddr, clilen, r);
                 break;
             case 'm':
                 /* For m, we need to use typeOrPath as a string */
@@ -100,12 +98,12 @@ void applyCommands(){
                     printf("Error: origin pathname does not exist.\n");
                     lockListClear(lookupLocks);
                     r = FAIL;
-                    send_result(clientAddr, clilen, r);
+                    send_result(&clientAddr, clilen, r);
                     break;
                 }
                 lockListClear(lookupLocks);
                 r = move(name, typeOrPath);
-                send_result(clientAddr, clilen, r);
+                send_result(&clientAddr, clilen, r);
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
@@ -175,13 +173,13 @@ void init_socket(char* path)
     }
 }
 
-char* receive_command(struct sockaddr_un clientAddr, socklen_t clilen)
+char* receive_command(struct sockaddr_un *clientAddr, socklen_t clilen)
 {
     char in_buffer[MAX_INPUT_SIZE];
     char* command;
     int c; /* Number of bytes read */
 
-    c = recvfrom(sockfd, in_buffer, sizeof(in_buffer)-1, 0, (struct sockaddr *)&clientAddr, &clilen);
+    c = recvfrom(sockfd, in_buffer, sizeof(in_buffer)-1, 0, (struct sockaddr *) clientAddr, &clilen);
     if (c <= 0) 
         return NULL; //Failed to read or read 0
     //Preventivo, caso o cliente nao tenha terminado a mensagem em '\0', 
@@ -190,21 +188,18 @@ char* receive_command(struct sockaddr_un clientAddr, socklen_t clilen)
     command = malloc(sizeof(char) * strlen(in_buffer));
     strcpy(command, in_buffer);
     return command;
-    
 }
 
 /* Sends the result of the operation to the client that gave the command */
-void send_result(struct sockaddr_un clientAddr, socklen_t clilen, int res)
+void send_result(struct sockaddr_un *clientAddr, socklen_t clilen, int res)
 {
-    int *r = malloc(sizeof(int));
-    *r = res;
-    if (sendto(sockfd, r, sizeof(int*), 0, (struct sockaddr *) &clientAddr, clilen) < 0) 
+    int result[1];
+    result[0] = res;
+    if (sendto(sockfd, result, sizeof(result)+1, 0, (struct sockaddr *) clientAddr, clilen) < 0) 
     {
-        fprintf(stderr, "Server: sendto error");
+        fprintf(stderr, "Server: sendto error\n");
         exit(EXIT_FAILURE);
     }
-
-    free(r);
 }
 
 /* Closes the socket with the given path */

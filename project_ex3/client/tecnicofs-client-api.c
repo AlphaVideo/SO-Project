@@ -6,6 +6,11 @@
 #include <sys/un.h>
 #include <stdio.h>
 
+/* Global command and result for operations */
+
+char* command;
+int* result;
+
 /*Socket info and Server Socket info */
 
 int sockfd;
@@ -28,28 +33,77 @@ int addrSetup(char *path, struct sockaddr_un *addr) {
 
 
 int tfsCreate(char *filename, char nodeType) {
-  /* TEMP */
-  if (sendto(sockfd, filename, strlen(filename)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
-    perror("client: sendto error");
+
+  sprintf(command, "c %s %c", filename, nodeType);
+
+  if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
+    perror("client: create sendto error");
     exit(EXIT_FAILURE);
   }
-  return 0;
+
+  if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
+    perror("client: create receive error");
+    exit(EXIT_FAILURE);
+  }
+
+  return *result;
 }
 
 int tfsDelete(char *path) {
-  return -1;
+  sprintf(command, "d %s", path);
+
+  if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
+    perror("client: delete sendto error");
+    exit(EXIT_FAILURE);
+  }
+
+  if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
+    perror("client: delete receive error");
+    exit(EXIT_FAILURE);
+  }
+
+  return *result;
 }
 
 int tfsMove(char *from, char *to) {
-  return -1;
+  sprintf(command, "m %s %s", from, to);
+
+  if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
+    perror("client: move sendto error");
+    exit(EXIT_FAILURE);
+  }
+
+  if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
+    perror("client: move receive error");
+    exit(EXIT_FAILURE);
+  }
+
+  return *result;
 }
 
 int tfsLookup(char *path) {
-  return -1;
+  sprintf(command, "l %s", path);
+
+  if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
+    perror("client: lookup sendto error");
+    exit(EXIT_FAILURE);
+  }
+
+  if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
+    perror("client: lookup receive error");
+    exit(EXIT_FAILURE);
+  }
+
+  if(*result >= 0)
+    return 0;
+  else
+    return -1;
 }
 
 int tfsMount(char * sockPath) {
 
+  command = malloc(sizeof(char)*MAX_INPUT_SIZE); /* Inits command */
+  result = malloc(sizeof(int));
   char* PID_BUFFER = malloc(sizeof(char)*MAX_INPUT_SIZE);
   char* CLIENT_BUFFER = malloc(sizeof(char)*MAX_INPUT_SIZE);
 
@@ -81,6 +135,8 @@ int tfsMount(char * sockPath) {
 }
 
 int tfsUnmount() {
+  free(command);
+  free(result);
   close(sockfd);
   return 0;
 }
