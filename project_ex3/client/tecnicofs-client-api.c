@@ -100,6 +100,23 @@ int tfsLookup(char *path) {
     return -1;
 }
 
+int tfsPrint(char* path) {
+
+  sprintf(command, "p %s", path);
+
+  if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
+    perror("client: print sendto error");
+    exit(EXIT_FAILURE);
+  }
+
+  if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
+    perror("client: print receive error");
+    exit(EXIT_FAILURE);
+  }
+
+  return *result;
+}
+
 int tfsMount(char * sockPath) {
 
   command = malloc(sizeof(char)*MAX_INPUT_SIZE); /* Inits command */
@@ -121,7 +138,7 @@ int tfsMount(char * sockPath) {
   if ((sockfd = socket(AF_UNIX, SOCK_DGRAM, 0) ) < 0) 
     return -1;
 
-  unlink(CLIENT);
+  unlink(clientName);
   clilen = addrSetup(clientName, &clientAddr);
   if (bind(sockfd, (struct sockaddr *) &clientAddr, clilen) < 0)
     return -1;
@@ -138,5 +155,6 @@ int tfsUnmount() {
   free(command);
   free(result);
   close(sockfd);
+  unlink(clientName);
   return 0;
 }

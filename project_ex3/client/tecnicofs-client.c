@@ -100,6 +100,15 @@ void *processInput() {
                 else
                   printf("Unable to move: %s to %s\n", arg1, arg2);
                 break;
+            case 'p':
+                if(numTokens != 2)
+                    errorParse();
+                res = tfsPrint(arg1);
+                if (!res)
+                  printf("Successfully printed to %s\n", arg1);
+                else
+                  printf("Couldn't print to %s\n", arg1);
+                break;
             case '#':
                 break;
             default: { /* error */

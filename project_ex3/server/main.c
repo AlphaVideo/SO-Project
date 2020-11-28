@@ -25,6 +25,7 @@ void execThreads(int nThreads);
 char* receive_command(struct sockaddr_un *clientAddr, socklen_t clilen);
 void send_result(struct sockaddr_un *clientAddr, socklen_t clilen, int res);
 void close_socket(char* path);
+int printTree(char* path);
 
 void applyCommands(){
 
@@ -103,6 +104,11 @@ void applyCommands(){
                 }
                 lockListClear(lookupLocks);
                 r = move(name, typeOrPath);
+                send_result(&clientAddr, clilen, r);
+                break;
+            case 'p':
+                printf("Print: %s\n", name);
+                r = printTree(name);
                 send_result(&clientAddr, clilen, r);
                 break;
             default: { /* error */
@@ -200,6 +206,12 @@ void send_result(struct sockaddr_un *clientAddr, socklen_t clilen, int res)
         fprintf(stderr, "Server: sendto error\n");
         exit(EXIT_FAILURE);
     }
+}
+
+/* Prints the tree to the selected path (server side) */
+int printTree(char* path)
+{
+    return 0;
 }
 
 /* Closes the socket with the given path */
