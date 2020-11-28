@@ -7,7 +7,9 @@
 #include <stdio.h>
 
 /*Socket info and Server Socket info */
+
 int sockfd;
+char clientName[MAX_PATH_SIZE];
 socklen_t servlen, clilen;
 struct sockaddr_un servAddr, clientAddr;
 
@@ -48,18 +50,33 @@ int tfsLookup(char *path) {
 
 int tfsMount(char * sockPath) {
 
+  char* PID_BUFFER = malloc(sizeof(char)*MAX_INPUT_SIZE);
+  char* CLIENT_BUFFER = malloc(sizeof(char)*MAX_INPUT_SIZE);
+
+  strcpy(CLIENT_BUFFER, CLIENT);
+
+  /* Converts pid to a string */
+  pid_t pid = getpid();
+  sprintf(PID_BUFFER, "%d", pid);
+
+  /*Client names must be unique*/
+  CLIENT_BUFFER = strcat(CLIENT_BUFFER, PID_BUFFER);
+  strcpy(clientName, CLIENT_BUFFER);
+
   /* Client socket init */
   if ((sockfd = socket(AF_UNIX, SOCK_DGRAM, 0) ) < 0) 
     return -1;
 
   unlink(CLIENT);
-  clilen = addrSetup(CLIENT, &clientAddr);
+  clilen = addrSetup(clientName, &clientAddr);
   if (bind(sockfd, (struct sockaddr *) &clientAddr, clilen) < 0)
     return -1;
 
   /* Server mount */
   servlen = addrSetup(sockPath, &servAddr);
 
+  free(CLIENT_BUFFER);
+  free(PID_BUFFER);
   return 0;
 }
 
