@@ -18,7 +18,8 @@ int numberThreads = 0;
 /* Print lock, cond and state variable */
 
 pthread_mutex_t printMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t printCond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t canReceive = PTHREAD_COND_INITIALIZER;
+pthread_cond_t canPrint = PTHREAD_COND_INITIALIZER;
 int wantsToPrint = 0;
 int threadsStopped = 0;
 
@@ -46,19 +47,6 @@ void applyCommands(){
         socklen_t clilen = sizeof(struct sockaddr_un);
 
         const char* command = receive_command(&clientAddr, clilen);
-
-        printLock();
-        while(wantsToPrint)
-        {
-            threadsStopped++;
-            if(pthread_cond_wait(&printCond, &printMutex) < 0)
-            {
-                fprintf(stderr, "Couldn't enter wait for print operation.\n");
-                exit(EXIT_FAILURE);
-            }
-            threadsStopped--;
-        }
-        printUnlock();
         
         if (command == NULL || strcmp(command, "") == 0){
             continue;
@@ -206,18 +194,33 @@ char* receive_command(struct sockaddr_un *clientAddr, socklen_t clilen)
     char* command;
     int c; /* Number of bytes read */
 
-    //While in recvfrom, thread is counted as stopped
     printLock();
     threadsStopped++;
+    if(pthread_cond_signal(&canPrint) < 0)
+    {
+        fprintf(stderr, "Couldn't signal: canPrint\n");
+        exit(EXIT_FAILURE);
+    }
     printUnlock();
 
     c = recvfrom(sockfd, in_buffer, sizeof(in_buffer)-1, 0, (struct sockaddr *) clientAddr, &clilen);
     if (c <= 0) 
+    {
+        threadsStopped--;
         return NULL; //Failed to read or read 0
+    }
     //Preventivo, caso o cliente nao tenha terminado a mensagem em '\0', 
     in_buffer[c]='\0';
 
     printLock();
+    while(wantsToPrint)
+    {
+        if(pthread_cond_wait(&canReceive, &printMutex) < 0)
+        {
+            fprintf(stderr, "Couldn't enter wait for print operation.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
     threadsStopped--;
     printUnlock();
 
@@ -248,17 +251,25 @@ int printTree(char* path)
     while(wantsToPrint)
     {
         threadsStopped++;
-        if(pthread_cond_wait(&printCond, &printMutex) < 0)
+        if(pthread_cond_wait(&canReceive, &printMutex) < 0)
         {
-            fprintf(stderr, "Couldn't enter wait for print operation.\n");
+            fprintf(stderr, "Couldn't enter wait: canReceive\n");
             exit(EXIT_FAILURE);
         }
+        threadsStopped--;
     }
     
     wantsToPrint = 1;
 
     //Waits for all threads to stop
-    while(threadsStopped != (numberThreads-1)) {}
+    while(threadsStopped != (numberThreads-1))
+    {
+        if(pthread_cond_wait(&canPrint, &printMutex) < 0)
+        {
+            fprintf(stderr, "Couldn't enter wait: canPrint\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     //Creating output file
     FILE *out = fopen(path, "w");
@@ -266,7 +277,7 @@ int printTree(char* path)
     {
         fprintf(stderr, "Error: output file couldn't be created.\n");
         wantsToPrint = 0;
-        if (pthread_cond_broadcast(&printCond) < 0)
+        if (pthread_cond_broadcast(&canReceive) < 0)
         {
             fprintf(stderr, "Couldn't broadcast printing condition.\n");
             exit(EXIT_FAILURE);
@@ -286,7 +297,7 @@ int printTree(char* path)
 
     //Cond update
     wantsToPrint = 0;
-    if (pthread_cond_broadcast(&printCond) < 0)
+    if (pthread_cond_broadcast(&canReceive) < 0)
     {
         fprintf(stderr, "Couldn't broadcast printing condition.\n");
         exit(EXIT_FAILURE);

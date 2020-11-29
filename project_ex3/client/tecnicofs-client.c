@@ -133,6 +133,6 @@ int main(int argc, char* argv[]) {
     processInput();
     
     tfsUnmount();
-
+    puts("Client has ended.");
     exit(EXIT_SUCCESS);
 }

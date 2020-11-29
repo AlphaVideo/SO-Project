@@ -1,8 +1,15 @@
-c a d
-l a
-l b
-c b f
-d b
-c c d
-m c a/c
-l a/c
+p client-outputs/out1
+p client-outputs/out2
+p client-outputs/out3
+p client-outputs/out4
+p client-outputs/out5
+p client-outputs/out6
+p client-outputs/out7
+p client-outputs/out8
+p client-outputs/out9
+p client-outputs/out10
+p client-outputs/out11
+p client-outputs/out12
+p client-outputs/out13
+p client-outputs/out14
+p client-outputs/out15
