@@ -6,8 +6,6 @@
 #define MAX_INPUT_SIZE 100
 #define MAX_PATH_SIZE 200
 #define CLIENT "/tmp/Client"
-#define SERVER "../server/Server"
-
 
 typedef enum permission { NONE, WRITE, READ, RW } permission;
 typedef enum type { T_FILE, T_DIRECTORY, T_NONE } type;
