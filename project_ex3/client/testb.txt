@@ -1,7 +1,0 @@
-c 1 f
-c 2 f
-c 3 f
-c 4 f
-c 5 f
-c 6 f
-p outputs-client/outputb.txt
