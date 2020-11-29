@@ -15,7 +15,15 @@
 
 int numberThreads = 0;
 
+/* Print lock, cond and state variable */
+
+pthread_mutex_t printMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t printCond = PTHREAD_COND_INITIALIZER;
+int wantsToPrint = 0;
+int threadsStopped = 0;
+
 /* Socket variables */
+
 int sockfd;
 struct sockaddr_un serverAddr;
 socklen_t serverlen;
@@ -38,6 +46,19 @@ void applyCommands(){
         socklen_t clilen = sizeof(struct sockaddr_un);
 
         const char* command = receive_command(&clientAddr, clilen);
+
+        printLock();
+        while(wantsToPrint)
+        {
+            threadsStopped++;
+            if(pthread_cond_wait(&printCond, &printMutex) < 0)
+            {
+                fprintf(stderr, "Couldn't enter wait for print operation.\n");
+                exit(EXIT_FAILURE);
+            }
+            threadsStopped--;
+        }
+        printUnlock();
         
         if (command == NULL || strcmp(command, "") == 0){
             continue;
@@ -185,14 +206,24 @@ char* receive_command(struct sockaddr_un *clientAddr, socklen_t clilen)
     char* command;
     int c; /* Number of bytes read */
 
+    //While in recvfrom, thread is counted as stopped
+    printLock();
+    threadsStopped++;
+    printUnlock();
+
     c = recvfrom(sockfd, in_buffer, sizeof(in_buffer)-1, 0, (struct sockaddr *) clientAddr, &clilen);
     if (c <= 0) 
         return NULL; //Failed to read or read 0
     //Preventivo, caso o cliente nao tenha terminado a mensagem em '\0', 
     in_buffer[c]='\0';
 
+    printLock();
+    threadsStopped--;
+    printUnlock();
+
     command = malloc(sizeof(char) * strlen(in_buffer));
     strcpy(command, in_buffer);
+    
     return command;
 }
 
@@ -211,7 +242,58 @@ void send_result(struct sockaddr_un *clientAddr, socklen_t clilen, int res)
 /* Prints the tree to the selected path (server side) */
 int printTree(char* path)
 {
-    return 0;
+    printLock();
+
+    /*If a print command is already in process, waits as well*/
+    while(wantsToPrint)
+    {
+        threadsStopped++;
+        if(pthread_cond_wait(&printCond, &printMutex) < 0)
+        {
+            fprintf(stderr, "Couldn't enter wait for print operation.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    wantsToPrint = 1;
+
+    //Waits for all threads to stop
+    while(threadsStopped != (numberThreads-1)) {}
+
+    //Creating output file
+    FILE *out = fopen(path, "w");
+    if(out == NULL)
+    {
+        fprintf(stderr, "Error: output file couldn't be created.\n");
+        wantsToPrint = 0;
+        if (pthread_cond_broadcast(&printCond) < 0)
+        {
+            fprintf(stderr, "Couldn't broadcast printing condition.\n");
+            exit(EXIT_FAILURE);
+        }
+        printUnlock();
+        return FAIL;
+    }
+
+    print_tecnicofs_tree(out);
+
+    //Closing output file
+    if(fclose(out) != 0)
+    {
+        fprintf(stderr, "Error: input file could not be closed.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //Cond update
+    wantsToPrint = 0;
+    if (pthread_cond_broadcast(&printCond) < 0)
+    {
+        fprintf(stderr, "Couldn't broadcast printing condition.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printUnlock();
+    return SUCCESS;
 }
 
 /* Closes the socket with the given path */
@@ -255,5 +337,3 @@ int main(int argc, char* argv[])
     destroy_fs();
     exit(EXIT_SUCCESS);
 }
-
-

@@ -4,7 +4,7 @@
 
 #define MAX_FILE_NAME 100
 #define MAX_INPUT_SIZE 100
-#define MAX_PATH_SIZE 100
+#define MAX_PATH_SIZE 200
 #define CLIENT "/tmp/Client"
 #define SERVER "../server/Server"
 

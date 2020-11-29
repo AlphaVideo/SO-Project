@@ -119,7 +119,7 @@ int tfsPrint(char* path) {
 
 int tfsMount(char * sockPath) {
 
-  command = malloc(sizeof(char)*MAX_INPUT_SIZE); /* Inits command */
+  command = malloc(sizeof(char)*MAX_INPUT_SIZE*2); /* Inits command */
   result = malloc(sizeof(int));
   char* PID_BUFFER = malloc(sizeof(char)*MAX_INPUT_SIZE);
   char* CLIENT_BUFFER = malloc(sizeof(char)*MAX_INPUT_SIZE);

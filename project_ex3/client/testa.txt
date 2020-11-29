@@ -4,3 +4,4 @@ c c d
 c d d
 c e d
 c f d
+p client-outputs/outputa.txt
