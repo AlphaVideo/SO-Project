@@ -1,0 +1,42 @@
+Mounted! (socket = /tmp/server)
+Created directory: /a
+Created directory: /c
+Created directory: /e
+Unable to create directory: /a
+Unable to create directory: /c
+Unable to create directory: /e
+Created file: /y
+Created directory: /a/b
+Created file: /a/b2
+Created file: /a/b3
+Created file: /a/b4
+Created file: /a/b5
+Created file: /a/z
+Created directory: /c/d
+Created file: /c/d2
+Created file: /c/d3
+Created file: /c/d4
+Created file: /c/d5
+Created directory: /e/f
+Created directory: /e/f2
+Created directory: /e/f3
+Moved: /a/b to /c/b
+Moved: /c/d to /a/d
+Moved: /a/b2 to /c/b2
+Moved: /c/d2 to /a/d2
+Created file: /x
+Unable to create file: /x/y/w/z
+Moved: /a/b3 to /e/b3
+Moved: /e/f to /c/f
+Moved: /c/d3 to /a/d3
+Moved: /a/b4 to /e/b4
+Moved: /e/f2 to /c/f2
+Moved: /c/d4 to /a/d4
+Moved: /a/b5 to /e/b5
+Moved: /e/f3 to /c/f3
+Moved: /c/d5 to /a/d5
+Moved: /y to /a/y
+Moved: /a/z to /z
+Unable to move: /a to /a/a
+Unable to move: /c to /c/c
+Unable to move: /e to /e/e

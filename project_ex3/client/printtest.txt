@@ -1,0 +1,10 @@
+p outputs/out1.txt
+p outputs/out2.txt
+p outputs/out3.txt
+p outputs/out4.txt
+p outputs/out5.txt
+p outputs/out6.txt
+p outputs/out7.txt
+p outputs/out8.txt
+p outputs/out9.txt
+p outputs/out10.txt

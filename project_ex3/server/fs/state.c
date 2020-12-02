@@ -308,3 +308,15 @@ void lockListUnlock(int inumber, pthread_rwlock_t** lockList)
         lockList[inumber] = NULL;
     }
 }
+
+/*Locks root for printing*/
+void printLock()
+{
+    lockwr(&inode_table[FS_ROOT].lock);
+}
+
+/*Unlocks root for print operation*/
+void printUnlock()
+{
+    unlock(&inode_table[FS_ROOT].lock);
+}

@@ -1,0 +1,136 @@
+Mounted! (socket = /tmp/server)
+Unable to create directory: /a
+Created directory: /b
+Unable to create directory: /a
+Unable to create directory: /b
+Unable to create directory: /a
+Unable to create directory: /b
+Unable to create directory: /a
+Unable to create directory: /b
+Search: / found
+Search: / found
+Search: / found
+Search: /a found
+Search: /b found
+Search: / found
+Search: / found
+Search: / found
+Created directory: /a/a
+Created directory: /b/b
+Created directory: /a/c
+Created directory: /b/d
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Created directory: /a/a/a
+Created directory: /b/b/b
+Created directory: /a/c/c
+Created directory: /b/d/d
+Created directory: /a/a/b
+Created directory: /b/b/c
+Created directory: /a/c/d
+Created directory: /b/d/e
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Created file: /a/a/a/a
+Created file: /b/b/b/b
+Created file: /a/c/c/c
+Created file: /b/d/d/d
+Search: / found
+Search: / found
+Search: / found
+Search: / found
+Search: /a found
+Search: /b found
+Search: /a found
+Search: /b found
+Search: / found
+Search: / found
+Created directory: /a/a/a/b1
+Created directory: /a/a/b/c1
+Created directory: /b/b/b/d1
+Created directory: /b/b/c/e1
+Created directory: /a/c/c/f1
+Created directory: /a/c/d/g1
+Created directory: /b/d/d/h1
+Created directory: /b/d/e/i1
+Search: / found
+Search: / found
+Created directory: /a/a/a/b2
+Created directory: /a/a/b/c2
+Created directory: /b/b/b/d2
+Created directory: /b/b/c/e2
+Created directory: /a/c/c/f2
+Unable to create directory: /a/c/d/g2
+Unable to create directory: /b/d/d/h2
+Unable to create directory: /b/d/e/i2
+Search: / found
+Search: / found
+Deleted: /a/a/a/b1
+Deleted: /a/a/b/c1
+Deleted: /b/b/b/d1
+Deleted: /b/b/c/e1
+Deleted: /a/c/c/f1
+Deleted: /a/c/d/g1
+Deleted: /b/d/d/h1
+Deleted: /b/d/e/i1
+Search: / found
+Search: / found
+Deleted: /a/a/a/b2
+Deleted: /a/a/b/c2
+Deleted: /b/b/b/d2
+Deleted: /b/b/c/e2
+Deleted: /a/c/c/f2
+Unable to delete: /a/c/d/g2
+Unable to delete: /b/d/d/h2
+Unable to delete: /b/d/e/i2
+Search: / found
+Search: / found
+Created directory: /a/a/a/b3
+Created directory: /a/a/b/c3
+Created directory: /b/b/b/d3
+Created directory: /b/b/c/e3
+Created directory: /a/c/c/f3
+Created directory: /a/c/d/g3
+Created directory: /b/d/d/h3
+Created directory: /b/d/e/i3
+Search: / found
+Search: / found
+Created directory: /a/a/a/b4
+Created directory: /a/a/b/c4
+Created directory: /b/b/b/d4
+Created directory: /b/b/c/e4
+Created directory: /a/c/c/f4
+Unable to create directory: /a/c/d/g4
+Unable to create directory: /b/d/d/h4
+Unable to create directory: /b/d/e/i4
+Search: / found
+Search: / found
+Deleted: /a/a/a/b3
+Deleted: /a/a/b/c3
+Deleted: /b/b/b/d3
+Deleted: /b/b/c/e3
+Deleted: /a/c/c/f3
+Deleted: /a/c/d/g3
+Deleted: /b/d/d/h3
+Deleted: /b/d/e/i3
+Search: / found
+Search: / found
+Deleted: /a/a/a/b4
+Deleted: /a/a/b/c4
+Deleted: /b/b/b/d4
+Deleted: /b/b/c/e4
+Deleted: /a/c/c/f4
+Unable to delete: /a/c/d/g4
+Unable to delete: /b/d/d/h4
+Unable to delete: /b/d/e/i4
+Search: / found
+Search: / found

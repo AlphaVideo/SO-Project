@@ -36,28 +36,6 @@ void unlock(pthread_rwlock_t *lock)
     }
 }
 
-/* Locks lock for printing operation.*/
-void printLock()
-{
-    if (pthread_mutex_lock(&printMutex) != 0)
-    {
-        fprintf(stderr, "Error: failed to lock print lock.\n");
-        exit(EXIT_FAILURE);
-    }
-
-}
-
-/* Unlocks lock for printing operation.*/
-void printUnlock()
-{
-    if (pthread_mutex_unlock(&printMutex) != 0)
-    {
-        fprintf(stderr, "Error: failed to unlock print lock.\n");
-        exit(EXIT_FAILURE);
-    }
-}
-
-
 void printLockList(pthread_rwlock_t **lockList)
 {
     int i;

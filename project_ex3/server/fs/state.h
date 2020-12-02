@@ -64,5 +64,7 @@ void lockListAddWr(int inumber, pthread_rwlock_t **lockList);
 void lockListSwitchToWr(int inumber, pthread_rwlock_t **lockList);
 void lockListClear(pthread_rwlock_t **lockList);
 void lockListUnlock(int inumber, pthread_rwlock_t** lockList);
+void printLock();
+void printUnlock();
 
 #endif /* INODES_H */

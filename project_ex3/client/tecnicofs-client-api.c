@@ -38,12 +38,12 @@ int tfsCreate(char *filename, char nodeType) {
 
   if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
     perror("client: create sendto error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
     perror("client: create receive error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   return *result;
@@ -54,12 +54,12 @@ int tfsDelete(char *path) {
 
   if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
     perror("client: delete sendto error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
     perror("client: delete receive error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   return *result;
@@ -70,12 +70,12 @@ int tfsMove(char *from, char *to) {
 
   if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
     perror("client: move sendto error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
     perror("client: move receive error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   return *result;
@@ -86,12 +86,12 @@ int tfsLookup(char *path) {
 
   if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
     perror("client: lookup sendto error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
     perror("client: lookup receive error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   if(*result >= 0)
@@ -106,12 +106,12 @@ int tfsPrint(char* path) {
 
   if (sendto(sockfd, command, strlen(command)+1, 0, (struct sockaddr *) &servAddr, servlen) < 0) {
     perror("client: print sendto error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   if(recvfrom(sockfd, result, sizeof(result)-1, 0, 0, 0) < 0) {
     perror("client: print receive error");
-    exit(EXIT_FAILURE);
+    return -1;
   }
 
   return *result;
