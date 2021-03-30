@@ -1,2 +1,2 @@
 # SO-TecnicoFS
-Projeto de So 2020/21
+Projeto de SO 2020/21
